@@ -3,7 +3,8 @@
  * 27 Judicial Divisions.
  * Source: https://nicnadr.gov.ng/division
  *
- * All 27 divisions now active with official addresses and contact details.
+ * Active for CSI: Abuja, Lagos, Port Harcourt.
+ * All divisions retain their address data; inactive ones show as "Coming Soon".
  * Judge data is fetched dynamically from the API.
  * Update judge records via the backend admin panel.
  */
@@ -44,7 +45,7 @@ export const NICN_DIVISIONS = [
     phone: '08051763175, 08034632899',
     state: 'Ebonyi',
     stateCode: 'EB',
-    active: true,
+    active: false,
   },
   {
     id: 'asaba',
@@ -53,7 +54,7 @@ export const NICN_DIVISIONS = [
     phone: '08034529786',
     state: 'Delta',
     stateCode: 'DE',
-    active: true,
+    active: false,
   },
   {
     id: 'akure',
@@ -62,7 +63,7 @@ export const NICN_DIVISIONS = [
     phone: '08036692666',
     state: 'Ondo',
     stateCode: 'ON',
-    active: true,
+    active: false,
   },
   {
     id: 'awka',
@@ -71,7 +72,7 @@ export const NICN_DIVISIONS = [
     phone: '07041502394, 08063962326',
     state: 'Anambra',
     stateCode: 'AN',
-    active: true,
+    active: false,
   },
   {
     id: 'bauchi',
@@ -80,7 +81,7 @@ export const NICN_DIVISIONS = [
     phone: '07045136005, 07036012032',
     state: 'Bauchi',
     stateCode: 'BA',
-    active: true,
+    active: false,
   },
   {
     id: 'benin',
@@ -90,7 +91,7 @@ export const NICN_DIVISIONS = [
     email: 'nicnbenindivision@gmail.com',
     state: 'Edo',
     stateCode: 'ED',
-    active: true,
+    active: false,
   },
   {
     id: 'calabar',
@@ -99,7 +100,7 @@ export const NICN_DIVISIONS = [
     phone: '07040754320, 08056632570',
     state: 'Cross River',
     stateCode: 'CR',
-    active: true,
+    active: false,
   },
   {
     id: 'ekiti',
@@ -108,7 +109,7 @@ export const NICN_DIVISIONS = [
     phone: '07045136153, 08033610875',
     state: 'Ekiti',
     stateCode: 'EK',
-    active: true,
+    active: false,
   },
   {
     id: 'enugu',
@@ -117,7 +118,7 @@ export const NICN_DIVISIONS = [
     phone: '07041502466, 07043442891',
     state: 'Enugu',
     stateCode: 'EN',
-    active: true,
+    active: false,
   },
   {
     id: 'gombe',
@@ -126,7 +127,7 @@ export const NICN_DIVISIONS = [
     phone: '08035996170',
     state: 'Gombe',
     stateCode: 'GO',
-    active: true,
+    active: false,
   },
   {
     id: 'ibadan',
@@ -135,7 +136,7 @@ export const NICN_DIVISIONS = [
     phone: '07040101229, 08057241970',
     state: 'Oyo',
     stateCode: 'OY',
-    active: true,
+    active: false,
   },
   {
     id: 'jos',
@@ -144,7 +145,7 @@ export const NICN_DIVISIONS = [
     phone: '07045136080',
     state: 'Plateau',
     stateCode: 'PL',
-    active: true,
+    active: false,
   },
   {
     id: 'kaduna',
@@ -153,7 +154,7 @@ export const NICN_DIVISIONS = [
     phone: '07041625843, 08033547215',
     state: 'Kaduna',
     stateCode: 'KD',
-    active: true,
+    active: false,
   },
   {
     id: 'kano',
@@ -162,7 +163,7 @@ export const NICN_DIVISIONS = [
     phone: '07041502094, 08035996170',
     state: 'Kano',
     stateCode: 'KN',
-    active: true,
+    active: false,
   },
   {
     id: 'lokoja',
@@ -171,7 +172,7 @@ export const NICN_DIVISIONS = [
     phone: '08069200201, 07040101249',
     state: 'Kogi',
     stateCode: 'KO',
-    active: true,
+    active: false,
   },
   {
     id: 'maiduguri',
@@ -180,7 +181,7 @@ export const NICN_DIVISIONS = [
     phone: '07040101260, 08036623602',
     state: 'Borno',
     stateCode: 'BO',
-    active: true,
+    active: false,
   },
   {
     id: 'makurdi',
@@ -189,7 +190,7 @@ export const NICN_DIVISIONS = [
     phone: '07040101218, 08033319485',
     state: 'Benue',
     stateCode: 'BE',
-    active: true,
+    active: false,
   },
   {
     id: 'minna',
@@ -198,7 +199,7 @@ export const NICN_DIVISIONS = [
     phone: '07041502054, 08033563797',
     state: 'Niger',
     stateCode: 'NI',
-    active: true,
+    active: false,
   },
   {
     id: 'owerri',
@@ -207,7 +208,7 @@ export const NICN_DIVISIONS = [
     phone: '07045136103, 08066215408',
     state: 'Imo',
     stateCode: 'IM',
-    active: true,
+    active: false,
   },
   {
     id: 'sokoto',
@@ -216,7 +217,7 @@ export const NICN_DIVISIONS = [
     phone: '07046346348, 08137331976',
     state: 'Sokoto',
     stateCode: 'SO',
-    active: true,
+    active: false,
   },
   {
     id: 'uyo',
@@ -225,7 +226,7 @@ export const NICN_DIVISIONS = [
     phone: '07045136075, 07041502631',
     state: 'Akwa Ibom',
     stateCode: 'AK',
-    active: true,
+    active: false,
   },
   {
     id: 'yola',
@@ -234,7 +235,7 @@ export const NICN_DIVISIONS = [
     phone: '07066289469',
     state: 'Adamawa',
     stateCode: 'AD',
-    active: true,
+    active: false,
   },
   {
     id: 'yenagoa',
@@ -243,7 +244,7 @@ export const NICN_DIVISIONS = [
     phone: '08038425573, 09017341404',
     state: 'Bayelsa',
     stateCode: 'BY',
-    active: true,
+    active: false,
   },
   {
     id: 'warri',

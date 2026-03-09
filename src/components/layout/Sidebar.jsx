@@ -7,27 +7,37 @@ import {
   DocumentTextIcon,
   BriefcaseIcon,
   BuildingLibraryIcon,
-  UserGroupIcon,
   BellIcon,
-  DocumentDuplicateIcon,
   Cog6ToothIcon,
   ChartBarIcon,
   ShieldCheckIcon,
   CreditCardIcon,
   ScaleIcon,
   UsersIcon,
+  BookOpenIcon,
+  ArchiveBoxIcon,
+  NewspaperIcon,
+  ClipboardDocumentListIcon,
+  SparklesIcon,
 } from '@heroicons/react/24/outline'
 import { useAuthStore } from '@/store/authStore'
 import { cn } from '@/utils/helpers'
 
 const mainNavigation = [
   { name: 'Dashboard', href: '/dashboard', icon: HomeIcon },
-  { name: 'CSI', href: '/csi', icon: DocumentTextIcon },
+]
+
+const featureNavigation = [
+  { name: 'Court Sitting Information', abbr: 'CSI', href: '/csi', icon: ScaleIcon, active: true },
+  { name: 'Law Reports',               abbr: 'LR',  href: null,   icon: BookOpenIcon,             active: false },
+  { name: 'Law Repository',            abbr: 'LRP', href: null,   icon: ArchiveBoxIcon,           active: false },
+  { name: 'News & Legal Updates',      abbr: 'NLU', href: null,   icon: NewspaperIcon,            active: false },
+  { name: 'E-Filing & Time',           abbr: 'ECT', href: null,   icon: ClipboardDocumentListIcon, active: false },
+  { name: 'AI Drafting',               abbr: 'AI',  href: null,   icon: SparklesIcon,             active: false },
 ]
 
 const secondaryNavigation = [
   { name: 'Notifications', href: '/notifications', icon: BellIcon },
-  { name: 'My Followings', href: '/followings', icon: DocumentDuplicateIcon },
   { name: 'Subscription', href: '/subscription', icon: CreditCardIcon },
   { name: 'Settings', href: '/settings', icon: Cog6ToothIcon },
 ]
@@ -57,6 +67,35 @@ function NavItem({ item, isActive }) {
       {item.name}
     </Link>
   )
+}
+
+function FeatureNavItem({ item, isActive }) {
+  const inner = (
+    <div
+      className={cn(
+        'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all',
+        item.active
+          ? isActive
+            ? 'bg-emerald-700 text-white'
+            : 'text-gray-600 hover:bg-gray-100 hover:text-charcoal-900'
+          : 'text-gray-400 cursor-not-allowed'
+      )}
+    >
+      <item.icon className="h-5 w-5 flex-shrink-0" />
+      <span className="flex-1 min-w-0 truncate">{item.name}</span>
+      {item.active ? (
+        <span className="text-[10px] font-bold bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded flex-shrink-0">
+          {item.abbr}
+        </span>
+      ) : (
+        <span className="text-[10px] font-medium bg-gray-100 text-gray-400 px-1.5 py-0.5 rounded flex-shrink-0">
+          Soon
+        </span>
+      )}
+    </div>
+  )
+
+  return item.active ? <Link to={item.href}>{inner}</Link> : <div>{inner}</div>
 }
 
 function SidebarContent() {
@@ -89,6 +128,21 @@ function SidebarContent() {
               isActive={location.pathname === item.href || location.pathname.startsWith(item.href + '/')}
             />
           ))}
+        </div>
+
+        <div className="pt-4 mt-4 border-t border-gray-100">
+          <p className="px-3 mb-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+            Features
+          </p>
+          <div className="space-y-1">
+            {featureNavigation.map((item) => (
+              <FeatureNavItem
+                key={item.name}
+                item={item}
+                isActive={location.pathname === item.href || (item.href && location.pathname.startsWith(item.href + '/'))}
+              />
+            ))}
+          </div>
         </div>
 
         <div className="pt-4 mt-4 border-t border-gray-100">
