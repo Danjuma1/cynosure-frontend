@@ -1,4 +1,5 @@
 import { Link, useParams, useNavigate } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
 import {
   BuildingLibraryIcon,
@@ -6,32 +7,30 @@ import {
   ChevronLeftIcon,
   UserGroupIcon,
   ScaleIcon,
+  ExclamationCircleIcon,
 } from '@heroicons/react/24/outline'
 import { Card, EmptyState } from '@/components/common'
-import { getCADivision } from '@/data/csi/caData'
+import { courtsAPI } from '@/services/api'
 
 export default function CAPanelsPage() {
-  const { divisionId } = useParams()
+  const { courtId } = useParams()
   const navigate = useNavigate()
-  const division = getCADivision(divisionId)
 
-  if (!division) {
-    return (
-      <div className="space-y-4">
-        <Link to="/csi/federal/CA" className="flex items-center gap-1 text-sm text-gray-500 hover:text-emerald-700">
-          <ChevronLeftIcon className="h-4 w-4" />
-          Back to CA Divisions
-        </Link>
-        <Card className="p-12">
-          <EmptyState
-            icon={<BuildingLibraryIcon className="h-12 w-12 text-gray-400" />}
-            title="Division not found"
-            description="This Court of Appeal division could not be found."
-          />
-        </Card>
-      </div>
-    )
-  }
+  const { data: courtData, isLoading: courtLoading } = useQuery({
+    queryKey: ['court', courtId],
+    queryFn: () => courtsAPI.get(courtId),
+    enabled: !!courtId,
+  })
+
+  const { data: panelsData, isLoading: panelsLoading, isError, refetch } = useQuery({
+    queryKey: ['panels', courtId],
+    queryFn: () => courtsAPI.getPanels(courtId),
+    enabled: !!courtId,
+  })
+
+  const court = courtData?.data
+  const panels = panelsData?.data?.results || []
+  const isLoading = courtLoading || panelsLoading
 
   return (
     <div className="space-y-6">
@@ -47,7 +46,9 @@ export default function CAPanelsPage() {
         <span>/</span>
         <Link to="/csi/federal/CA" className="hover:text-emerald-700">Court of Appeal</Link>
         <span>/</span>
-        <span className="text-charcoal-900 font-medium">{division.name}</span>
+        <span className="text-charcoal-900 font-medium">
+          {courtLoading ? '…' : (court?.name || 'Division')}
+        </span>
       </motion.nav>
 
       {/* Header */}
@@ -57,18 +58,21 @@ export default function CAPanelsPage() {
             <BuildingLibraryIcon className="h-6 w-6 text-emerald-700" />
           </div>
           <div>
-            <h1 className="text-2xl font-display font-bold text-charcoal-900">
-              {division.name}
-            </h1>
+            {courtLoading ? (
+              <div className="skeleton h-7 w-48 rounded mb-1" />
+            ) : (
+              <h1 className="text-2xl font-display font-bold text-charcoal-900">{court?.name}</h1>
+            )}
             <p className="text-gray-500 text-sm">
-              Court of Appeal · {division.state} · {division.panels.length} Panel{division.panels.length !== 1 ? 's' : ''}
+              Court of Appeal · {court?.city}
+              {!panelsLoading && panels.length > 0 && ` · ${panels.length} Panel${panels.length !== 1 ? 's' : ''}`}
             </p>
           </div>
         </div>
-        {division.location && (
+        {court?.address && (
           <p className="text-sm text-gray-500 mt-2 flex items-center gap-1.5">
             <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-400" />
-            {division.location}
+            {court.address}
           </p>
         )}
         <p className="text-gray-600 mt-3 text-sm">
@@ -77,8 +81,25 @@ export default function CAPanelsPage() {
         </p>
       </motion.div>
 
+      {/* Error */}
+      {isError && (
+        <Card className="p-6">
+          <div className="flex items-center gap-3 text-red-600">
+            <ExclamationCircleIcon className="h-6 w-6 flex-shrink-0" />
+            <div>
+              <p className="font-medium">Failed to load panels</p>
+              <button onClick={refetch} className="text-sm underline mt-1">Try again</button>
+            </div>
+          </div>
+        </Card>
+      )}
+
       {/* Panels Grid */}
-      {division.panels.length === 0 ? (
+      {isLoading ? (
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {[1, 2, 3].map((i) => <div key={i} className="skeleton h-32 rounded-xl" />)}
+        </div>
+      ) : panels.length === 0 && !isError ? (
         <Card className="p-10">
           <EmptyState
             icon={<UserGroupIcon className="h-12 w-12 text-gray-400" />}
@@ -88,7 +109,7 @@ export default function CAPanelsPage() {
         </Card>
       ) : (
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {division.panels.map((panel, i) => (
+          {panels.map((panel, i) => (
             <motion.div
               key={panel.id}
               initial={{ opacity: 0, y: 20 }}
@@ -96,7 +117,7 @@ export default function CAPanelsPage() {
               transition={{ delay: i * 0.08 }}
             >
               <button
-                onClick={() => navigate(`/csi/federal/CA/${divisionId}/${panel.id}`)}
+                onClick={() => navigate(`/csi/federal/CA/${courtId}/${panel.id}`)}
                 className="w-full text-left"
               >
                 <Card className="p-5 hover:shadow-card-hover hover:border-emerald-200 transition-all group border border-gray-100">
@@ -110,18 +131,14 @@ export default function CAPanelsPage() {
                           {panel.name}
                         </h3>
                         <p className="text-xs text-gray-500 mt-0.5">Court of Appeal</p>
-                        <p className="text-xs text-gray-400 mt-0.5">{division.name}</p>
+                        <p className="text-xs text-gray-400 mt-0.5">{court?.name}</p>
                       </div>
                     </div>
                     <ChevronRightIcon className="h-5 w-5 text-gray-300 group-hover:text-emerald-600 group-hover:translate-x-0.5 transition-all flex-shrink-0 mt-1" />
                   </div>
-
                   <div className="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between">
                     <span className="text-xs text-gray-500">Tap to view cause list &amp; sitting status</span>
-                    <span className="text-xs font-medium text-emerald-700 flex items-center gap-1">
-                      View
-                      <ChevronRightIcon className="h-3 w-3" />
-                    </span>
+                    <span className="text-xs font-medium text-emerald-700">View →</span>
                   </div>
                 </Card>
               </button>
@@ -132,10 +149,7 @@ export default function CAPanelsPage() {
 
       {/* Back */}
       <div>
-        <Link
-          to="/csi/federal/CA"
-          className="flex items-center gap-1 text-sm text-gray-500 hover:text-emerald-700 w-fit"
-        >
+        <Link to="/csi/federal/CA" className="flex items-center gap-1 text-sm text-gray-500 hover:text-emerald-700 w-fit">
           <ChevronLeftIcon className="h-4 w-4" />
           Back to CA Divisions
         </Link>

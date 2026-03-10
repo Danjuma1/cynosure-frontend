@@ -16,15 +16,6 @@ import { LoginPage, SignupPage, ForgotPasswordPage } from '@/pages/auth'
 // Dashboard Pages
 import DashboardPage from '@/pages/DashboardPage'
 
-// Cases Pages
-import { CasesListPage, CaseDetailPage } from '@/pages/cases'
-
-// Courts Pages
-import { CourtsListPage } from '@/pages/courts'
-
-// Judges Pages
-import { JudgesListPage } from '@/pages/judges'
-
 // Cause Lists Pages
 import { CauseListsPage } from '@/pages/cause-lists'
 
@@ -69,9 +60,6 @@ import {
 
 // Settings Pages
 import { SettingsPage, SubscriptionPage, FollowingsPage } from '@/pages/settings'
-
-// Repository Pages
-import { RepositoryPage } from '@/pages/repository'
 
 // Loading component
 import { PageLoader } from '@/components/common/LoadingSpinner'
@@ -172,16 +160,6 @@ export default function App() {
       >
         <Route path="/dashboard" element={<DashboardPage />} />
         
-        {/* Cases */}
-        <Route path="/cases" element={<CasesListPage />} />
-        <Route path="/cases/:id" element={<CaseDetailPage />} />
-        
-        {/* Courts */}
-        <Route path="/courts" element={<CourtsListPage />} />
-        
-        {/* Judges */}
-        <Route path="/judges" element={<JudgesListPage />} />
-        
         {/* ── CSI — Court Sitting Information ───────────────── */}
         <Route path="/csi" element={<CSILandingPage />} />
 
@@ -190,33 +168,33 @@ export default function App() {
 
         {/* Court of Appeal (CA) */}
         <Route path="/csi/federal/CA" element={<CADivisionsPage />} />
-        <Route path="/csi/federal/CA/:divisionId" element={<CAPanelsPage />} />
-        <Route path="/csi/federal/CA/:divisionId/:panelId" element={<CauseListStatusPage />} />
+        <Route path="/csi/federal/CA/:courtId" element={<CAPanelsPage />} />
+        <Route path="/csi/federal/CA/:courtId/:panelId" element={<CauseListStatusPage />} />
 
         {/* Federal High Court (FHC) */}
         <Route path="/csi/federal/FHC" element={<FHCDivisionsPage />} />
-        <Route path="/csi/federal/FHC/:divisionId" element={<FHCJudgesPage />} />
-        <Route path="/csi/federal/FHC/:divisionId/:judgeId" element={<CauseListStatusPage />} />
+        <Route path="/csi/federal/FHC/:courtId" element={<FHCJudgesPage />} />
+        <Route path="/csi/federal/FHC/:courtId/:judgeId" element={<CauseListStatusPage />} />
 
         {/* National Industrial Court (NICN) */}
         <Route path="/csi/federal/NIC" element={<NICDivisionsPage />} />
-        <Route path="/csi/federal/NIC/:divisionId" element={<NICJudgesPage />} />
-        <Route path="/csi/federal/NIC/:divisionId/:judgeId" element={<CauseListStatusPage />} />
+        <Route path="/csi/federal/NIC/:courtId" element={<NICJudgesPage />} />
+        <Route path="/csi/federal/NIC/:courtId/:judgeId" element={<CauseListStatusPage />} />
 
         {/* State Courts */}
         <Route path="/csi/state" element={<StateCourtLandingPage />} />
 
         {/* State High Courts */}
         <Route path="/csi/state/high-court" element={<StateHighCourtListPage />} />
-        <Route path="/csi/state/high-court/:stateId" element={<StateDivisionsPage />} />
-        <Route path="/csi/state/high-court/:stateId/:divisionId" element={<StateJudgesPage />} />
-        <Route path="/csi/state/high-court/:stateId/:divisionId/:judgeId" element={<CauseListStatusPage />} />
+        <Route path="/csi/state/high-court/:courtId" element={<StateDivisionsPage />} />
+        <Route path="/csi/state/high-court/:courtId/:divisionId" element={<StateJudgesPage />} />
+        <Route path="/csi/state/high-court/:courtId/:divisionId/:judgeId" element={<CauseListStatusPage />} />
 
         {/* Magistrate Courts */}
         <Route path="/csi/state/magistrate" element={<MagistrateListPage />} />
-        <Route path="/csi/state/magistrate/:stateId" element={<MagistrateDivisionsPage />} />
-        <Route path="/csi/state/magistrate/:stateId/:divisionId" element={<MagistrateJudgesPage />} />
-        <Route path="/csi/state/magistrate/:stateId/:divisionId/:judgeId" element={<CauseListStatusPage />} />
+        <Route path="/csi/state/magistrate/:courtId" element={<MagistrateDivisionsPage />} />
+        <Route path="/csi/state/magistrate/:courtId/:divisionId" element={<MagistrateJudgesPage />} />
+        <Route path="/csi/state/magistrate/:courtId/:divisionId/:judgeId" element={<CauseListStatusPage />} />
 
         {/* Cause Lists (direct access) */}
         <Route path="/cause-lists" element={<CauseListsPage />} />
@@ -229,9 +207,6 @@ export default function App() {
         <Route path="/profile" element={<SettingsPage />} />
         <Route path="/subscription" element={<SubscriptionPage />} />
         <Route path="/followings" element={<FollowingsPage />} />
-        
-        {/* Repository */}
-        <Route path="/repository" element={<RepositoryPage />} />
         
         {/* Admin Routes */}
         <Route

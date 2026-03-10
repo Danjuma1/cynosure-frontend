@@ -7,50 +7,30 @@ import {
   ChevronRightIcon,
   ScaleIcon,
   UserCircleIcon,
+  ExclamationCircleIcon,
 } from '@heroicons/react/24/outline'
 import { Card, EmptyState } from '@/components/common'
-import { judgesAPI } from '@/services/api'
-import { getFHCDivision } from '@/data/csi/fhcData'
+import { judgesAPI, courtsAPI } from '@/services/api'
 
 export default function FHCJudgesPage() {
-  const { divisionId } = useParams()
+  const { courtId } = useParams()
   const navigate = useNavigate()
-  const division = getFHCDivision(divisionId)
-  const staticJudges = division?.judges || []
 
-  const { data } = useQuery({
-    queryKey: ['judges', 'FHC', divisionId],
-    queryFn: () =>
-      judgesAPI.list({
-        court_type: 'FHC',
-        state: division?.stateCode,
-        page_size: 50,
-      }),
-    enabled: !!division,
+  const { data: courtData, isLoading: courtLoading } = useQuery({
+    queryKey: ['court', courtId],
+    queryFn: () => courtsAPI.get(courtId),
+    enabled: !!courtId,
   })
 
-  const apiJudges = data?.data?.results || []
-  // Use API data when available (it may have richer details); fall back to static
-  const judges = apiJudges.length > 0 ? apiJudges : staticJudges
-  const isLoading = false // static data loads instantly; API enhances silently
+  const { data: judgesData, isLoading: judgesLoading, isError, refetch } = useQuery({
+    queryKey: ['judges', 'FHC', courtId],
+    queryFn: () => judgesAPI.list({ court: courtId, is_active: true, page_size: 50 }),
+    enabled: !!courtId,
+  })
 
-  if (!division) {
-    return (
-      <div className="space-y-4">
-        <Link to="/csi/federal/FHC" className="flex items-center gap-1 text-sm text-gray-500 hover:text-emerald-700">
-          <ChevronLeftIcon className="h-4 w-4" />
-          Back to FHC Divisions
-        </Link>
-        <Card className="p-12">
-          <EmptyState
-            icon={<BuildingLibraryIcon className="h-12 w-12 text-gray-400" />}
-            title="Division not found"
-            description="This Federal High Court division could not be found."
-          />
-        </Card>
-      </div>
-    )
-  }
+  const court = courtData?.data
+  const judges = judgesData?.data?.results || []
+  const isLoading = courtLoading || judgesLoading
 
   return (
     <div className="space-y-6">
@@ -66,7 +46,9 @@ export default function FHCJudgesPage() {
         <span>/</span>
         <Link to="/csi/federal/FHC" className="hover:text-emerald-700">Federal High Court</Link>
         <span>/</span>
-        <span className="text-charcoal-900 font-medium">{division.name}</span>
+        <span className="text-charcoal-900 font-medium">
+          {courtLoading ? '…' : (court?.name || 'Division')}
+        </span>
       </motion.nav>
 
       {/* Header */}
@@ -76,62 +58,60 @@ export default function FHCJudgesPage() {
             <BuildingLibraryIcon className="h-6 w-6 text-blue-600" />
           </div>
           <div>
-            <h1 className="text-2xl font-display font-bold text-charcoal-900">
-              {division.name}
-            </h1>
-            <p className="text-gray-500 text-sm">Federal High Court · {division.state}</p>
+            {courtLoading
+              ? <div className="skeleton h-7 w-56 rounded mb-1" />
+              : <h1 className="text-2xl font-display font-bold text-charcoal-900">{court?.name}</h1>
+            }
+            <p className="text-gray-500 text-sm">Federal High Court · {court?.city}</p>
           </div>
         </div>
-        {division.location && (
-          <p className="text-sm text-gray-500 mt-2">{division.location}</p>
-        )}
-        <p className="text-gray-600 mt-2 text-sm">
-          Select a judge to view their daily cause list and sitting status.
-        </p>
+        {court?.address && <p className="text-sm text-gray-500 mt-2">{court.address}</p>}
+        <p className="text-gray-600 mt-2 text-sm">Select a judge to view their daily cause list and sitting status.</p>
       </motion.div>
 
-      {/* Judges */}
+      {isError && (
+        <Card className="p-6">
+          <div className="flex items-center gap-3 text-red-600">
+            <ExclamationCircleIcon className="h-6 w-6 flex-shrink-0" />
+            <div>
+              <p className="font-medium">Failed to load judges</p>
+              <button onClick={refetch} className="text-sm underline mt-1">Try again</button>
+            </div>
+          </div>
+        </Card>
+      )}
+
       {isLoading ? (
         <div className="grid md:grid-cols-2 gap-4">
-          {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="skeleton h-28 rounded-xl" />
-          ))}
+          {[1, 2, 3, 4].map((i) => <div key={i} className="skeleton h-28 rounded-xl" />)}
         </div>
-      ) : judges.length === 0 ? (
+      ) : judges.length === 0 && !isError ? (
         <Card className="p-12">
           <EmptyState
             icon={<ScaleIcon className="h-12 w-12 text-gray-400" />}
             title="No judges found"
-            description="No Federal High Court judges found for this division. Judge data may not yet be populated in the system."
+            description="No Federal High Court judges found for this division."
           />
         </Card>
       ) : (
         <div className="grid md:grid-cols-2 gap-4">
           {judges.map((judge, i) => (
-            <motion.div
-              key={judge.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.06 }}
-            >
-              <button
-                onClick={() => navigate(`/csi/federal/FHC/${divisionId}/${judge.id}`)}
-                className="w-full text-left"
-              >
+            <motion.div key={judge.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.06 }}>
+              <button onClick={() => navigate(`/csi/federal/FHC/${courtId}/${judge.id}`)} className="w-full text-left">
                 <Card className="p-4 hover:shadow-card-hover hover:border-blue-200 transition-all group border border-gray-100">
                   <div className="flex items-start gap-3">
                     <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
-                      <UserCircleIcon className="h-6 w-6 text-blue-600" />
+                      {judge.photo
+                        ? <img src={judge.photo} alt="" className="w-10 h-10 rounded-full object-cover" />
+                        : <UserCircleIcon className="h-6 w-6 text-blue-600" />
+                      }
                     </div>
                     <div className="flex-1 min-w-0">
                       <h3 className="font-semibold text-charcoal-900 group-hover:text-blue-700 transition-colors">
-                        {judge.name || judge.formal_name || `${judge.title || 'Hon. Justice'} ${judge.first_name} ${judge.last_name}`}
+                        {judge.formal_name || `${judge.title || 'Hon. Justice'} ${judge.first_name} ${judge.last_name}`}
                       </h3>
-                      {judge.role && (
-                        <p className="text-xs text-blue-600 font-medium mt-0.5">{judge.role}</p>
-                      )}
-                      {judge.court_number && (
-                        <p className="text-xs text-gray-500 mt-0.5">Court {judge.court_number}</p>
+                      {judge.is_chief_judge && (
+                        <p className="text-xs text-blue-600 font-medium mt-0.5">Chief Judge</p>
                       )}
                     </div>
                     <ChevronRightIcon className="h-5 w-5 text-gray-300 group-hover:text-blue-600 group-hover:translate-x-0.5 transition-all flex-shrink-0 mt-1" />

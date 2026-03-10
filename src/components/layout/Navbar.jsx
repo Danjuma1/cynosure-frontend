@@ -1,11 +1,10 @@
-import { Fragment, useState } from 'react'
+import { Fragment, useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Menu, Transition } from '@headlessui/react'
 import {
   Bars3Icon,
   BellIcon,
   MagnifyingGlassIcon,
-  XMarkIcon,
   UserCircleIcon,
   Cog6ToothIcon,
   ArrowRightOnRectangleIcon,
@@ -14,20 +13,25 @@ import { useAuthStore } from '@/store/authStore'
 import { useNotificationStore } from '@/store/notificationStore'
 import { Avatar, Button } from '@/components/common'
 import { cn } from '@/utils/helpers'
-
-const navigation = [
-  { name: 'Dashboard', href: '/dashboard' },
-  { name: 'Cause Lists', href: '/cause-lists' },
-  { name: 'Cases', href: '/cases' },
-  { name: 'Courts', href: '/courts' },
-  { name: 'Judges', href: '/judges' },
-]
+import SearchModal from '@/components/search/SearchModal'
 
 export default function Navbar({ onMenuClick }) {
   const navigate = useNavigate()
-  const { user, logout, isAdmin } = useAuthStore()
+  const { user, logout } = useAuthStore()
   const { unreadCount } = useNotificationStore()
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [searchOpen, setSearchOpen] = useState(false)
+
+  // Global Cmd/Ctrl+K shortcut
+  useEffect(() => {
+    const handler = (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault()
+        setSearchOpen(true)
+      }
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [])
 
   const handleLogout = () => {
     logout()
@@ -35,57 +39,28 @@ export default function Navbar({ onMenuClick }) {
   }
 
   return (
+    <>
     <nav className="bg-white border-b border-gray-100 sticky top-0 z-40">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
-          {/* Logo & Menu Button */}
-          <div className="flex items-center gap-4">
-            <button
-              onClick={onMenuClick}
-              className="lg:hidden p-2 rounded-lg text-gray-600 hover:bg-gray-100"
-            >
-              <Bars3Icon className="h-6 w-6" />
-            </button>
-            
-            <Link to="/" className="flex items-center gap-2">
-              <div className="w-9 h-9 rounded-xl bg-gradient-brand flex items-center justify-center">
-                <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
-                </svg>
-              </div>
-              <span className="font-display font-bold text-xl text-charcoal-900 hidden sm:block">
-                Cynosure
-              </span>
-            </Link>
-          </div>
+          {/* Mobile menu button (opens sidebar) */}
+          <button
+            onClick={onMenuClick}
+            className="lg:hidden p-2 rounded-lg text-gray-600 hover:bg-gray-100"
+          >
+            <Bars3Icon className="h-6 w-6" />
+          </button>
 
-          {/* Desktop Navigation */}
-          <div className="hidden lg:flex items-center gap-1">
-            {navigation.map((item) => (
-              <Link
-                key={item.name}
-                to={item.href}
-                className="px-4 py-2 rounded-lg text-sm font-medium text-gray-600 hover:text-emerald-700 hover:bg-emerald-50 transition-colors"
-              >
-                {item.name}
-              </Link>
-            ))}
-            {isAdmin() && (
-              <Link
-                to="/admin"
-                className="px-4 py-2 rounded-lg text-sm font-medium text-gray-600 hover:text-emerald-700 hover:bg-emerald-50 transition-colors"
-              >
-                Admin
-              </Link>
-            )}
-          </div>
+          {/* Spacer on desktop so right-side items sit flush right */}
+          <div className="hidden lg:block" />
 
-          {/* Right Side */}
+          {/* Right Side — search, notifications, user */}
           <div className="flex items-center gap-2">
             {/* Search */}
             <button
-              onClick={() => navigate('/search')}
+              onClick={() => setSearchOpen(true)}
               className="p-2 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors"
+              title="Search (⌘K)"
             >
               <MagnifyingGlassIcon className="h-5 w-5" />
             </button>
@@ -112,9 +87,14 @@ export default function Navbar({ onMenuClick }) {
                     name={`${user.first_name} ${user.last_name}`}
                     size="sm"
                   />
-                  <span className="hidden sm:block text-sm font-medium text-gray-700">
-                    {user.first_name}
-                  </span>
+                  <div className="hidden sm:block text-left">
+                    <p className="text-sm font-medium text-gray-700 leading-tight">
+                      {user.first_name} {user.last_name}
+                    </p>
+                    <p className="text-xs text-gray-400 leading-tight truncate max-w-[140px]">
+                      {user.email}
+                    </p>
+                  </div>
                 </Menu.Button>
 
                 <Transition
@@ -196,51 +176,9 @@ export default function Navbar({ onMenuClick }) {
           </div>
         </div>
       </div>
-
-      {/* Mobile Menu */}
-      <Transition show={mobileMenuOpen} as={Fragment}>
-        <div className="lg:hidden">
-          <Transition.Child
-            as={Fragment}
-            enter="ease-out duration-200"
-            enterFrom="opacity-0"
-            enterTo="opacity-100"
-            leave="ease-in duration-150"
-            leaveFrom="opacity-100"
-            leaveTo="opacity-0"
-          >
-            <div
-              className="fixed inset-0 bg-charcoal-900/50 z-40"
-              onClick={() => setMobileMenuOpen(false)}
-            />
-          </Transition.Child>
-
-          <Transition.Child
-            as={Fragment}
-            enter="ease-out duration-200"
-            enterFrom="opacity-0 -translate-y-4"
-            enterTo="opacity-100 translate-y-0"
-            leave="ease-in duration-150"
-            leaveFrom="opacity-100 translate-y-0"
-            leaveTo="opacity-0 -translate-y-4"
-          >
-            <div className="absolute top-16 inset-x-4 bg-white rounded-xl shadow-lg border border-gray-100 p-4 z-50">
-              <div className="space-y-1">
-                {navigation.map((item) => (
-                  <Link
-                    key={item.name}
-                    to={item.href}
-                    className="block px-4 py-2.5 rounded-lg text-gray-700 hover:bg-gray-50"
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
-                    {item.name}
-                  </Link>
-                ))}
-              </div>
-            </div>
-          </Transition.Child>
-        </div>
-      </Transition>
     </nav>
+
+    <SearchModal open={searchOpen} onClose={() => setSearchOpen(false)} />
+    </>
   )
 }

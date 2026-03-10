@@ -6,13 +6,14 @@ import {
   PencilSquareIcon,
   TrashIcon,
   DocumentTextIcon,
-  EyeIcon,
   ArrowPathIcon,
+  PhotoIcon,
+  XMarkIcon,
 } from '@heroicons/react/24/outline'
-import { Link } from 'react-router-dom'
 import { Button, Card, Badge, Modal, SearchInput, Pagination } from '@/components/common'
-import { adminAPI } from '@/services/api'
+import { causeListsAPI, courtsAPI, judgesAPI } from '@/services/api'
 import { formatDate, CAUSE_LIST_STATUSES } from '@/utils/helpers'
+import CauseListImageUploader from '@/components/cause-lists/CauseListImageUploader'
 
 export default function AdminCauseListsPage() {
   const queryClient = useQueryClient()
@@ -21,9 +22,11 @@ export default function AdminCauseListsPage() {
   const [dateFilter, setDateFilter] = useState('')
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingList, setEditingList] = useState(null)
+  const [imageUploadList, setImageUploadList] = useState(null)
   const [formData, setFormData] = useState({
     court_id: '',
     judge_id: '',
+    panel_id: '',
     date: '',
     start_time: '',
     status: 'draft',
@@ -31,21 +34,41 @@ export default function AdminCauseListsPage() {
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: ['admin', 'cause-lists', { search, page, date: dateFilter }],
-    queryFn: () => adminAPI.getCauseLists({ search, page, date: dateFilter }),
+    queryFn: () => causeListsAPI.list({ search, page, date: dateFilter, page_size: 20 }),
   })
 
   const { data: courtsData } = useQuery({
-    queryKey: ['admin', 'courts', 'all'],
-    queryFn: () => adminAPI.getCourts({ limit: 100 }),
+    queryKey: ['courts', 'all'],
+    queryFn: () => courtsAPI.list({ page_size: 100, ordering: 'name' }),
   })
 
   const { data: judgesData } = useQuery({
-    queryKey: ['admin', 'judges', 'all'],
-    queryFn: () => adminAPI.getJudges({ limit: 100 }),
+    queryKey: ['judges', 'all'],
+    queryFn: () => judgesAPI.list({ page_size: 200, ordering: 'last_name' }),
   })
 
+  const courts = courtsData?.data?.results || []
+  const allJudges = judgesData?.data?.results || []
+
+  // Detect if selected court is CA (uses panels instead of judges)
+  const selectedCourt = courts.find((c) => c.id === formData.court_id)
+  const isCA = selectedCourt?.court_type === 'CA'
+
+  // Fetch panels when a CA court is selected
+  const { data: panelsData } = useQuery({
+    queryKey: ['courts', formData.court_id, 'panels'],
+    queryFn: () => courtsAPI.getPanels(formData.court_id),
+    enabled: !!formData.court_id && isCA,
+  })
+  const panels = panelsData?.data?.results || []
+
+  // Filter judges to selected court only
+  const filteredJudges = formData.court_id
+    ? allJudges.filter((j) => j.court?.id === formData.court_id || j.court === formData.court_id)
+    : allJudges
+
   const createMutation = useMutation({
-    mutationFn: (data) => adminAPI.createCauseList(data),
+    mutationFn: (data) => causeListsAPI.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries(['admin', 'cause-lists'])
       closeModal()
@@ -53,7 +76,7 @@ export default function AdminCauseListsPage() {
   })
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => adminAPI.updateCauseList(id, data),
+    mutationFn: ({ id, data }) => causeListsAPI.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries(['admin', 'cause-lists'])
       closeModal()
@@ -61,14 +84,21 @@ export default function AdminCauseListsPage() {
   })
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => adminAPI.deleteCauseList(id),
+    mutationFn: (id) => causeListsAPI.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries(['admin', 'cause-lists'])
     },
   })
 
   const publishMutation = useMutation({
-    mutationFn: (id) => adminAPI.publishCauseList(id),
+    mutationFn: (id) => causeListsAPI.updateStatus(id, { status: 'published' }),
+    onSuccess: () => {
+      queryClient.invalidateQueries(['admin', 'cause-lists'])
+    },
+  })
+
+  const statusMutation = useMutation({
+    mutationFn: ({ id, status }) => causeListsAPI.updateStatus(id, { status }),
     onSuccess: () => {
       queryClient.invalidateQueries(['admin', 'cause-lists'])
     },
@@ -80,13 +110,14 @@ export default function AdminCauseListsPage() {
       setFormData({
         court_id: list.court?.id || '',
         judge_id: list.judge?.id || '',
+        panel_id: list.panel?.id || '',
         date: list.date || '',
         start_time: list.start_time || '',
         status: list.status || 'draft',
       })
     } else {
       setEditingList(null)
-      setFormData({ court_id: '', judge_id: '', date: '', start_time: '', status: 'draft' })
+      setFormData({ court_id: '', judge_id: '', panel_id: '', date: '', start_time: '', status: 'draft' })
     }
     setIsModalOpen(true)
   }
@@ -98,10 +129,19 @@ export default function AdminCauseListsPage() {
 
   const handleSubmit = (e) => {
     e.preventDefault()
-    if (editingList) {
-      updateMutation.mutate({ id: editingList.id, data: formData })
+    const payload = { ...formData }
+    // Strip unused entity field based on court type
+    if (isCA) {
+      delete payload.judge_id
     } else {
-      createMutation.mutate(formData)
+      delete payload.panel_id
+    }
+    // Remove empty strings
+    Object.keys(payload).forEach((k) => { if (payload[k] === '') delete payload[k] })
+    if (editingList) {
+      updateMutation.mutate({ id: editingList.id, data: payload })
+    } else {
+      createMutation.mutate(payload)
     }
   }
 
@@ -117,9 +157,15 @@ export default function AdminCauseListsPage() {
     }
   }
 
+  // Fetch images for the currently-open upload panel
+  const { data: imagesData, refetch: refetchImages } = useQuery({
+    queryKey: ['causeList', 'images', imageUploadList?.id],
+    queryFn: () => causeListsAPI.getImages(imageUploadList.id),
+    enabled: !!imageUploadList?.id,
+  })
+  const existingImages = imagesData?.data?.data || []
+
   const causeLists = data?.data?.results || []
-  const courts = courtsData?.data?.results || []
-  const judges = judgesData?.data?.results || []
   const totalPages = Math.ceil((data?.data?.count || 0) / 20)
 
   return (
@@ -172,6 +218,7 @@ export default function AdminCauseListsPage() {
                 <th className="text-left py-4 px-6 text-xs font-semibold text-gray-500 uppercase">Judge</th>
                 <th className="text-left py-4 px-6 text-xs font-semibold text-gray-500 uppercase">Date</th>
                 <th className="text-left py-4 px-6 text-xs font-semibold text-gray-500 uppercase">Cases</th>
+                <th className="text-left py-4 px-6 text-xs font-semibold text-gray-500 uppercase">Images</th>
                 <th className="text-left py-4 px-6 text-xs font-semibold text-gray-500 uppercase">Status</th>
                 <th className="text-right py-4 px-6 text-xs font-semibold text-gray-500 uppercase">Actions</th>
               </tr>
@@ -202,18 +249,41 @@ export default function AdminCauseListsPage() {
                       <Badge variant="neutral">{list.total_cases || 0} cases</Badge>
                     </td>
                     <td className="py-4 px-6">
-                      <Badge variant={CAUSE_LIST_STATUSES[list.status]?.color || 'neutral'} dot>
-                        {CAUSE_LIST_STATUSES[list.status]?.label || list.status}
-                      </Badge>
+                      <button
+                        onClick={() => setImageUploadList(list)}
+                        className="flex items-center gap-1.5 text-sm text-gray-600 hover:text-emerald-700 transition-colors"
+                        title="Manage images"
+                      >
+                        {list.cover_thumbnail ? (
+                          <img src={list.cover_thumbnail} alt="" className="w-8 h-10 object-cover rounded" />
+                        ) : (
+                          <PhotoIcon className="h-5 w-5 text-gray-300" />
+                        )}
+                        <span className="text-xs font-medium">
+                          {list.image_count > 0 ? `${list.image_count} pg` : 'Upload'}
+                        </span>
+                      </button>
+                    </td>
+                    <td className="py-4 px-6">
+                      <select
+                        value={list.status}
+                        onChange={(e) => statusMutation.mutate({ id: list.id, status: e.target.value })}
+                        className="text-xs border border-gray-200 rounded-lg px-2 py-1 bg-white text-gray-700 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                      >
+                        {Object.entries(CAUSE_LIST_STATUSES).map(([value, { label }]) => (
+                          <option key={value} value={value}>{label}</option>
+                        ))}
+                      </select>
                     </td>
                     <td className="py-4 px-6">
                       <div className="flex items-center justify-end gap-2">
-                        <Link
-                          to={`/cause-lists/${list.id}`}
-                          className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                        <button
+                          onClick={() => setImageUploadList(list)}
+                          className="p-2 text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
+                          title="Upload images"
                         >
-                          <EyeIcon className="h-5 w-5" />
-                        </Link>
+                          <PhotoIcon className="h-5 w-5" />
+                        </button>
                         {list.status === 'draft' && (
                           <button
                             onClick={() => handlePublish(list)}
@@ -257,6 +327,58 @@ export default function AdminCauseListsPage() {
         )}
       </Card>
 
+      {/* Image Upload Panel */}
+      {imageUploadList && (
+        <div className="fixed inset-0 z-40 flex justify-end">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+            onClick={() => setImageUploadList(null)}
+          />
+          {/* Panel */}
+          <motion.div
+            initial={{ x: '100%' }}
+            animate={{ x: 0 }}
+            exit={{ x: '100%' }}
+            transition={{ type: 'spring', damping: 28, stiffness: 300 }}
+            className="relative w-full max-w-2xl bg-white h-full flex flex-col shadow-2xl overflow-hidden"
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 flex-shrink-0">
+              <div>
+                <p className="text-xs text-gray-400 font-medium uppercase tracking-wider">Upload Cause List Photos</p>
+                <h2 className="text-base font-semibold text-charcoal-900 mt-0.5">
+                  {imageUploadList.court?.name || 'Cause List'} — {formatDate(imageUploadList.date)}
+                </h2>
+                {imageUploadList.judge?.formal_name && (
+                  <p className="text-xs text-gray-500 mt-0.5">{imageUploadList.judge.formal_name}</p>
+                )}
+                {imageUploadList.panel?.name && (
+                  <p className="text-xs text-gray-500 mt-0.5">{imageUploadList.panel.name}</p>
+                )}
+              </div>
+              <button
+                onClick={() => setImageUploadList(null)}
+                className="p-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+              >
+                <XMarkIcon className="h-5 w-5" />
+              </button>
+            </div>
+            {/* Body */}
+            <div className="flex-1 overflow-y-auto p-6">
+              <CauseListImageUploader
+                causeListId={imageUploadList.id}
+                existingImages={existingImages}
+                onUploaded={() => {
+                  refetchImages()
+                  queryClient.invalidateQueries(['admin', 'cause-lists'])
+                }}
+              />
+            </div>
+          </motion.div>
+        </div>
+      )}
+
       {/* Add/Edit Modal */}
       <Modal isOpen={isModalOpen} onClose={closeModal} title={editingList ? 'Edit Cause List' : 'Add New Cause List'}>
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -264,7 +386,7 @@ export default function AdminCauseListsPage() {
             <label className="block text-sm font-medium text-gray-700 mb-1">Court</label>
             <select
               value={formData.court_id}
-              onChange={(e) => setFormData({ ...formData, court_id: e.target.value })}
+              onChange={(e) => setFormData({ ...formData, court_id: e.target.value, judge_id: '', panel_id: '' })}
               className="input"
               required
             >
@@ -275,20 +397,37 @@ export default function AdminCauseListsPage() {
             </select>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Judge</label>
-            <select
-              value={formData.judge_id}
-              onChange={(e) => setFormData({ ...formData, judge_id: e.target.value })}
-              className="input"
-              required
-            >
-              <option value="">Select judge</option>
-              {judges.map((judge) => (
-                <option key={judge.id} value={judge.id}>{judge.formal_name}</option>
-              ))}
-            </select>
-          </div>
+          {isCA ? (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Panel</label>
+              <select
+                value={formData.panel_id}
+                onChange={(e) => setFormData({ ...formData, panel_id: e.target.value })}
+                className="input"
+                required
+              >
+                <option value="">Select panel</option>
+                {panels.map((panel) => (
+                  <option key={panel.id} value={panel.id}>{panel.name}</option>
+                ))}
+              </select>
+            </div>
+          ) : (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Judge</label>
+              <select
+                value={formData.judge_id}
+                onChange={(e) => setFormData({ ...formData, judge_id: e.target.value })}
+                className="input"
+                required={!isCA}
+              >
+                <option value="">Select judge {formData.court_id ? '' : '(select court first)'}</option>
+                {filteredJudges.map((judge) => (
+                  <option key={judge.id} value={judge.id}>{judge.formal_name}</option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <div className="grid grid-cols-2 gap-4">
             <div>

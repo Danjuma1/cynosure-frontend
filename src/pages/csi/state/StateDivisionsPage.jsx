@@ -1,4 +1,5 @@
 import { Link, useParams } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
 import {
   ScaleIcon,
@@ -6,32 +7,29 @@ import {
   ChevronRightIcon,
   ChevronLeftIcon,
   BuildingLibraryIcon,
+  ExclamationCircleIcon,
 } from '@heroicons/react/24/outline'
 import { Card, EmptyState } from '@/components/common'
-import { getState, getStateHCDivisions } from '@/data/csi/stateCourtData'
+import { courtsAPI } from '@/services/api'
 
 export default function StateDivisionsPage() {
-  const { stateId } = useParams()
-  const state = getState(stateId)
-  const divisions = getStateHCDivisions(stateId)
+  const { courtId } = useParams()
 
-  if (!state) {
-    return (
-      <div className="space-y-4">
-        <Link to="/csi/state/high-court" className="flex items-center gap-1 text-sm text-gray-500 hover:text-emerald-700">
-          <ChevronLeftIcon className="h-4 w-4" />
-          Back to States
-        </Link>
-        <Card className="p-12">
-          <EmptyState
-            icon={<BuildingLibraryIcon className="h-12 w-12 text-gray-400" />}
-            title="State not found"
-            description="The selected state could not be found."
-          />
-        </Card>
-      </div>
-    )
-  }
+  const { data: courtData, isLoading: courtLoading } = useQuery({
+    queryKey: ['court', courtId],
+    queryFn: () => courtsAPI.get(courtId),
+    enabled: !!courtId,
+  })
+
+  const { data: divisionsData, isLoading: divisionsLoading, isError, refetch } = useQuery({
+    queryKey: ['court', courtId, 'divisions'],
+    queryFn: () => courtsAPI.getDivisions(courtId),
+    enabled: !!courtId,
+  })
+
+  const court = courtData?.data
+  const divisions = divisionsData?.data?.data || divisionsData?.data?.results || []
+  const isLoading = courtLoading || divisionsLoading
 
   return (
     <div className="space-y-6">
@@ -47,7 +45,9 @@ export default function StateDivisionsPage() {
         <span>/</span>
         <Link to="/csi/state/high-court" className="hover:text-emerald-700">State High Courts</Link>
         <span>/</span>
-        <span className="text-charcoal-900 font-medium">{state.name}</span>
+        <span className="text-charcoal-900 font-medium">
+          {courtLoading ? '…' : (court?.name || 'Court')}
+        </span>
       </motion.nav>
 
       {/* Header */}
@@ -57,25 +57,40 @@ export default function StateDivisionsPage() {
             <ScaleIcon className="h-6 w-6 text-purple-700" />
           </div>
           <div>
-            <h1 className="text-2xl font-display font-bold text-charcoal-900">
-              {state.name} State High Court
-            </h1>
+            {courtLoading
+              ? <div className="skeleton h-7 w-56 rounded mb-1" />
+              : <h1 className="text-2xl font-display font-bold text-charcoal-900">{court?.name}</h1>
+            }
             <p className="text-gray-500 text-sm">
-              {divisions.length > 0
-                ? `${divisions.length} division${divisions.length !== 1 ? 's' : ''} — Select a division`
-                : 'Divisions coming soon'}
+              {divisionsLoading ? 'Loading…' : `${divisions.length} division${divisions.length !== 1 ? 's' : ''} — Select a division`}
             </p>
           </div>
         </div>
       </motion.div>
 
+      {isError && (
+        <Card className="p-6">
+          <div className="flex items-center gap-3 text-red-600">
+            <ExclamationCircleIcon className="h-6 w-6 flex-shrink-0" />
+            <div>
+              <p className="font-medium">Failed to load divisions</p>
+              <button onClick={refetch} className="text-sm underline mt-1">Try again</button>
+            </div>
+          </div>
+        </Card>
+      )}
+
       {/* Divisions */}
-      {divisions.length === 0 ? (
+      {isLoading ? (
+        <div className="grid md:grid-cols-2 gap-4">
+          {[1, 2, 3].map((i) => <div key={i} className="skeleton h-24 rounded-xl" />)}
+        </div>
+      ) : divisions.length === 0 && !isError ? (
         <Card className="p-12">
           <EmptyState
             icon={<BuildingLibraryIcon className="h-12 w-12 text-gray-400" />}
             title="Divisions not yet available"
-            description={`Division data for the ${state.name} State High Court is not yet available. Check back soon.`}
+            description="Division data for this court is not yet available. Check back soon."
           />
         </Card>
       ) : (
@@ -87,7 +102,7 @@ export default function StateDivisionsPage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.08 }}
             >
-              <Link to={`/csi/state/high-court/${stateId}/${division.id}`}>
+              <Link to={`/csi/state/high-court/${courtId}/${division.id}`}>
                 <Card className="p-5 hover:shadow-card-hover hover:border-purple-200 transition-all group">
                   <div className="flex items-start gap-3">
                     <div className="w-10 h-10 rounded-xl bg-purple-50 flex items-center justify-center flex-shrink-0">
@@ -97,10 +112,10 @@ export default function StateDivisionsPage() {
                       <h3 className="font-semibold text-charcoal-900 group-hover:text-purple-700 transition-colors">
                         {division.name}
                       </h3>
-                      {division.location && (
+                      {division.city && (
                         <p className="text-xs text-gray-500 mt-1 flex items-center gap-1">
                           <MapPinIcon className="h-3.5 w-3.5" />
-                          {division.location}
+                          {division.city}
                         </p>
                       )}
                     </div>

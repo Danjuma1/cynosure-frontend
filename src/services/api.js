@@ -84,6 +84,9 @@ export const courtsAPI = {
   follow: (id) => api.post(`/courts/${id}/follow/`),
   unfollow: (id) => api.post(`/courts/${id}/unfollow/`),
   getDivisions: (id) => api.get(`/courts/${id}/divisions/`),
+  getDivision: (id) => api.get(`/courts/divisions/${id}/`),
+  getPanels: (courtId) => api.get('/courts/panels/', { params: { court: courtId, ordering: 'name' } }),
+  getPanel: (id) => api.get(`/courts/panels/${id}/`),
   getStatistics: (id) => api.get(`/courts/${id}/statistics/`),
   getRules: (id) => api.get(`/courts/${id}/rules/`),
   getHolidays: (id) => api.get(`/courts/${id}/holidays/`),
@@ -117,6 +120,10 @@ export const casesAPI = {
 export const causeListsAPI = {
   list: (params) => api.get('/cause-lists/', { params }),
   get: (id) => api.get(`/cause-lists/${id}/`),
+  create: (data) => api.post('/cause-lists/', data),
+  update: (id, data) => api.patch(`/cause-lists/${id}/`, data),
+  delete: (id) => api.delete(`/cause-lists/${id}/`),
+  updateStatus: (id, data) => api.post(`/cause-lists/${id}/update_status/`, data),
   getDaily: (params) => api.get('/cause-lists/daily/', { params }),
   getByJudge: (params) => api.get('/cause-lists/by-judge/', { params }),
   getByCourt: (params) => api.get('/cause-lists/by-court/', { params }),
@@ -125,6 +132,14 @@ export const causeListsAPI = {
   subscribe: (data) => api.post('/cause-lists/subscriptions/', data),
   unsubscribe: (id) => api.delete(`/cause-lists/subscriptions/${id}/`),
   getSubscriptions: () => api.get('/cause-lists/subscriptions/'),
+  // Image endpoints
+  getImages: (id) => api.get(`/cause-lists/${id}/images/`),
+  uploadImages: (id, formData) =>
+    api.post(`/cause-lists/${id}/images/`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }),
+  deleteImage: (causeListId, imageId) =>
+    api.delete(`/cause-lists/${causeListId}/images/${imageId}/`),
 }
 
 // Notifications endpoints
@@ -186,30 +201,37 @@ export const adminAPI = {
   getUser: (id) => api.get(`/admin/users/${id}/`),
   updateUser: (id, data) => api.patch(`/admin/users/${id}/`, data),
   deleteUser: (id) => api.delete(`/admin/users/${id}/`),
-  // Courts
-  getCourts: (params) => api.get('/admin/courts/', { params }),
-  getCourt: (id) => api.get(`/admin/courts/${id}/`),
-  createCourt: (data) => api.post('/admin/courts/', data),
-  updateCourt: (id, data) => api.patch(`/admin/courts/${id}/`, data),
-  deleteCourt: (id) => api.delete(`/admin/courts/${id}/`),
-  // Judges
-  getJudges: (params) => api.get('/admin/judges/', { params }),
-  getJudge: (id) => api.get(`/admin/judges/${id}/`),
-  createJudge: (data) => api.post('/admin/judges/', data),
-  updateJudge: (id, data) => api.patch(`/admin/judges/${id}/`, data),
-  deleteJudge: (id) => api.delete(`/admin/judges/${id}/`),
+  // Courts (uses public API — admin users have CanManageCourt permission)
+  getCourts: (params) => api.get('/courts/', { params }),
+  getCourt: (id) => api.get(`/courts/${id}/`),
+  createCourt: (data) => api.post('/courts/', data),
+  updateCourt: (id, data) => api.patch(`/courts/${id}/`, data),
+  deleteCourt: (id) => api.delete(`/courts/${id}/`),
+  // Divisions
+  getDivisions: (params) => api.get('/courts/divisions/', { params }),
+  getDivision: (id) => api.get(`/courts/divisions/${id}/`),
+  createDivision: (data) => api.post('/courts/divisions/', data),
+  updateDivision: (id, data) => api.patch(`/courts/divisions/${id}/`, data),
+  deleteDivision: (id) => api.delete(`/courts/divisions/${id}/`),
+  // Judges (uses public API — admin users have CanManageCourt permission)
+  getJudges: (params) => api.get('/judges/', { params }),
+  getJudge: (id) => api.get(`/judges/${id}/`),
+  createJudge: (data) => api.post('/judges/', data),
+  updateJudge: (id, data) => api.patch(`/judges/${id}/`, data),
+  deleteJudge: (id) => api.delete(`/judges/${id}/`),
   // Cases
-  getCases: (params) => api.get('/admin/cases/', { params }),
-  getCase: (id) => api.get(`/admin/cases/${id}/`),
-  createCase: (data) => api.post('/admin/cases/', data),
-  updateCase: (id, data) => api.patch(`/admin/cases/${id}/`, data),
-  deleteCase: (id) => api.delete(`/admin/cases/${id}/`),
-  // Cause Lists
-  getCauseLists: (params) => api.get('/admin/cause-lists/', { params }),
-  getCauseList: (id) => api.get(`/admin/cause-lists/${id}/`),
-  createCauseList: (data) => api.post('/admin/cause-lists/', data),
-  updateCauseList: (id, data) => api.patch(`/admin/cause-lists/${id}/`, data),
-  deleteCauseList: (id) => api.delete(`/admin/cause-lists/${id}/`),
+  getCases: (params) => api.get('/cases/', { params }),
+  getCase: (id) => api.get(`/cases/${id}/`),
+  createCase: (data) => api.post('/cases/', data),
+  updateCase: (id, data) => api.patch(`/cases/${id}/`, data),
+  deleteCase: (id) => api.delete(`/cases/${id}/`),
+  // Cause Lists (uses public API — admin users have CanUploadCauseList permission)
+  getCauseLists: (params) => api.get('/cause-lists/', { params }),
+  getCauseList: (id) => api.get(`/cause-lists/${id}/`),
+  createCauseList: (data) => api.post('/cause-lists/', data),
+  updateCauseList: (id, data) => api.patch(`/cause-lists/${id}/`, data),
+  deleteCauseList: (id) => api.delete(`/cause-lists/${id}/`),
+  publishCauseList: (id) => api.post(`/cause-lists/${id}/update_status/`, { status: 'published' }),
   // System
   getSystemStatus: () => api.get('/admin/system/status/'),
   clearCache: () => api.post('/admin/system/clear-cache/'),
