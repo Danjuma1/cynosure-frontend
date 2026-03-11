@@ -21,7 +21,6 @@ class WebSocketService {
     const ws = new WebSocket(url)
     
     ws.onopen = () => {
-      console.log(`WebSocket connected: ${endpoint}`)
       this.reconnectAttempts.set(endpoint, 0)
       
       if (options.onOpen) {
@@ -54,21 +53,18 @@ class WebSocketService {
         if (data.type !== 'pong') {
           onMessage(data)
         }
-      } catch (error) {
-        console.error('WebSocket message parse error:', error)
+      } catch {
+        // parse error ignored
       }
     }
 
     ws.onerror = (error) => {
-      console.error(`WebSocket error: ${endpoint}`, error)
       if (options.onError) {
         options.onError(error)
       }
     }
 
     ws.onclose = (event) => {
-      console.log(`WebSocket closed: ${endpoint}`, event.code)
-      
       if (ws._pingInterval) {
         clearInterval(ws._pingInterval)
       }
@@ -80,7 +76,6 @@ class WebSocketService {
       if (attempts < this.maxReconnectAttempts && !event.wasClean) {
         this.reconnectAttempts.set(endpoint, attempts + 1)
         setTimeout(() => {
-          console.log(`Reconnecting ${endpoint}... Attempt ${attempts + 1}`)
           this.connect(endpoint, onMessage, options)
         }, this.reconnectDelay * (attempts + 1))
       }
