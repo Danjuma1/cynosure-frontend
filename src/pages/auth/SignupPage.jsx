@@ -35,7 +35,7 @@ export default function SignupPage() {
     defaultValues: {
       email: '',
       password: '',
-      password_confirm: '',
+      confirm_password: '',
       first_name: '',
       last_name: '',
       phone_number: '',
@@ -239,8 +239,8 @@ export default function SignupPage() {
                   type="password"
                   placeholder="••••••••"
                   leftIcon={<LockClosedIcon className="h-5 w-5" />}
-                  error={errors.password_confirm?.message}
-                  {...register('password_confirm', {
+                  error={errors.confirm_password?.message}
+                  {...register('confirm_password', {
                     required: 'Please confirm your password',
                     validate: (value) =>
                       value === password || 'Passwords do not match',
