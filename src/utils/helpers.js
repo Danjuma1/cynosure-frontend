@@ -189,23 +189,71 @@ export const storage = {
   },
 }
 
-// Error message extractor
+// Maps raw backend/network messages to user-friendly copy
+const FRIENDLY_ERRORS = {
+  // Email
+  'A user with this email already exists.': 'This email is already registered. Try signing in instead.',
+  'Enter a valid email address.': 'Please enter a valid email address.',
+  // Password
+  'This password is too common.': 'This password is too easy to guess. Add numbers, symbols, or make it longer.',
+  'This password is entirely numeric.': "Password can't be all numbers — add some letters.",
+  'This password is too short. It must contain at least 8 characters.': 'Password must be at least 8 characters long.',
+  'The password is too similar to the email address.': 'Your password is too similar to your email. Choose something more unique.',
+  'The password is too similar to the first name.': 'Your password is too similar to your name. Choose something more unique.',
+  'The password is too similar to the last name.': 'Your password is too similar to your name. Choose something more unique.',
+  "Passwords don't match.": "Passwords don't match. Please re-enter them.",
+  // Auth
+  'No account found with this email.': 'No account found with that email address.',
+  'Invalid password.': 'Incorrect password. Please try again.',
+  'Account is temporarily locked. Please try again later.': 'Your account is temporarily locked after too many failed attempts. Try again in 30 minutes.',
+  'This account has been deactivated.': 'This account has been deactivated. Contact support for help.',
+  // Network / server
+  'Network Error': "Can't reach the server. Check your internet connection and try again.",
+  'Request failed with status code 429': 'Too many attempts. Please wait a moment and try again.',
+  'Request failed with status code 500': 'Something went wrong on our end. Please try again in a moment.',
+  'Request failed with status code 503': 'The service is temporarily unavailable. Please try again shortly.',
+}
+
+function applyFriendlyMessage(raw) {
+  if (!raw) return raw
+  return FRIENDLY_ERRORS[raw] ?? raw
+}
+
+// Error message extractor — returns a single human-readable string
 export function getErrorMessage(error) {
-  if (error.response?.data?.message) {
-    return error.response.data.message
+  // Field-level DRF validation errors: { email: ["..."], password: ["..."] }
+  const data = error.response?.data
+  if (data && typeof data === 'object') {
+    // Prefer explicit top-level message/detail
+    if (data.message) return applyFriendlyMessage(data.message)
+    if (data.detail) return applyFriendlyMessage(data.detail)
+
+    // Collect all field and non-field error strings
+    const messages = Object.entries(data).flatMap(([, val]) =>
+      Array.isArray(val) ? val : [val]
+    )
+    if (messages.length) return messages.map(applyFriendlyMessage).join(' ')
   }
-  if (error.response?.data?.detail) {
-    return error.response.data.detail
+
+  // Axios network / timeout errors
+  if (error.message) return applyFriendlyMessage(error.message)
+
+  return 'An unexpected error occurred. Please try again.'
+}
+
+// Extracts field-level errors from a DRF 400 response into a plain object.
+// Suitable for feeding directly into react-hook-form's setError().
+// Returns { fieldName: "friendly message", ... }
+export function getFieldErrors(error) {
+  const data = error.response?.data
+  if (!data || typeof data !== 'object') return {}
+
+  const reserved = new Set(['message', 'detail', 'status', 'code'])
+  const result = {}
+  for (const [field, val] of Object.entries(data)) {
+    if (reserved.has(field)) continue
+    const raw = Array.isArray(val) ? val[0] : String(val)
+    result[field] = applyFriendlyMessage(raw)
   }
-  if (error.response?.data?.errors) {
-    const errors = error.response.data.errors
-    if (typeof errors === 'object') {
-      return Object.values(errors).flat().join(', ')
-    }
-    return errors
-  }
-  if (error.message) {
-    return error.message
-  }
-  return 'An unexpected error occurred'
+  return result
 }

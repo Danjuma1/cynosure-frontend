@@ -12,12 +12,67 @@ import {
 import { Button, Input, Select } from '@/components/common'
 import { authAPI } from '@/services/api'
 import { useAuthStore } from '@/store/authStore'
-import { getErrorMessage, NIGERIAN_STATES } from '@/utils/helpers'
+import { getErrorMessage, getFieldErrors } from '@/utils/helpers'
 
 const userTypes = [
   { value: 'lawyer', label: 'Legal Practitioner' },
   { value: 'firm_admin', label: 'Law Firm Administrator' },
 ]
+
+const PASSWORD_CHECKS = [
+  { label: 'At least 8 characters', test: (p) => p.length >= 8 },
+  { label: 'Uppercase letter (A–Z)', test: (p) => /[A-Z]/.test(p) },
+  { label: 'Lowercase letter (a–z)', test: (p) => /[a-z]/.test(p) },
+  { label: 'Number (0–9)', test: (p) => /\d/.test(p) },
+  { label: 'Special character (!@#…)', test: (p) => /[^A-Za-z0-9]/.test(p) },
+]
+
+function PasswordStrengthMeter({ password }) {
+  if (!password) return null
+
+  const results = PASSWORD_CHECKS.map((c) => ({ ...c, met: c.test(password) }))
+  const score = results.filter((c) => c.met).length
+
+  const barColor =
+    score <= 2 ? 'bg-red-500' : score === 3 ? 'bg-yellow-500' : score === 4 ? 'bg-emerald-500' : 'bg-emerald-600'
+  const label =
+    score <= 1 ? 'Very weak' : score === 2 ? 'Weak' : score === 3 ? 'Fair' : score === 4 ? 'Good' : 'Strong'
+  const labelColor =
+    score <= 2 ? 'text-red-600' : score === 3 ? 'text-yellow-600' : 'text-emerald-600'
+
+  return (
+    <div className="space-y-2 pt-1">
+      <div className="flex items-center gap-2">
+        <div className="flex flex-1 gap-1">
+          {[1, 2, 3, 4, 5].map((i) => (
+            <div
+              key={i}
+              className={`h-1.5 flex-1 rounded-full transition-colors duration-300 ${i <= score ? barColor : 'bg-gray-200'}`}
+            />
+          ))}
+        </div>
+        <span className={`text-xs font-medium ${labelColor}`}>{label}</span>
+      </div>
+      <ul className="grid grid-cols-2 gap-x-4 gap-y-1">
+        {results.map((check) => (
+          <li key={check.label} className={`flex items-center gap-1.5 text-xs ${check.met ? 'text-emerald-600' : 'text-gray-400'}`}>
+            {check.met ? (
+              <svg className="w-3.5 h-3.5 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+              </svg>
+            ) : (
+              <svg className="w-3.5 h-3.5 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                <circle cx="10" cy="10" r="8" className="opacity-20" />
+                <circle cx="10" cy="10" r="1.5" />
+              </svg>
+            )}
+            {check.label}
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
 
 export default function SignupPage() {
   const navigate = useNavigate()
@@ -30,6 +85,8 @@ export default function SignupPage() {
     handleSubmit,
     watch,
     setValue,
+    trigger,
+    setError,
     formState: { errors },
   } = useForm({
     defaultValues: {
@@ -46,6 +103,8 @@ export default function SignupPage() {
   const password = watch('password')
   const userType = watch('user_type')
 
+  const STEP1_FIELDS = ['first_name', 'last_name', 'email', 'phone_number', 'user_type']
+
   const onSubmit = async (data) => {
     setIsLoading(true)
     try {
@@ -55,7 +114,20 @@ export default function SignupPage() {
       toast.success('Account created successfully!')
       navigate('/dashboard')
     } catch (error) {
-      toast.error(getErrorMessage(error))
+      const fieldErrors = getFieldErrors(error)
+      const fieldNames = Object.keys(fieldErrors)
+
+      if (fieldNames.length > 0) {
+        // Set each field error inline so it appears next to the field
+        fieldNames.forEach((field) => {
+          setError(field, { type: 'server', message: fieldErrors[field] })
+        })
+        // If any error belongs to step 1, take the user back there
+        const hasStep1Error = fieldNames.some((f) => STEP1_FIELDS.includes(f))
+        if (hasStep1Error) setStep(1)
+      } else {
+        toast.error(getErrorMessage(error))
+      }
     } finally {
       setIsLoading(false)
     }
@@ -155,6 +227,9 @@ export default function SignupPage() {
                   <Input
                     label="First name"
                     placeholder="John"
+                    autoComplete="given-name"
+                    autoCapitalize="words"
+                    autoCorrect="off"
                     leftIcon={<UserIcon className="h-5 w-5" />}
                     error={errors.first_name?.message}
                     {...register('first_name', {
@@ -164,6 +239,9 @@ export default function SignupPage() {
                   <Input
                     label="Last name"
                     placeholder="Doe"
+                    autoComplete="family-name"
+                    autoCapitalize="words"
+                    autoCorrect="off"
                     error={errors.last_name?.message}
                     {...register('last_name', {
                       required: 'Last name is required',
@@ -175,6 +253,10 @@ export default function SignupPage() {
                   label="Email address"
                   type="email"
                   placeholder="you@example.com"
+                  autoComplete="email"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck="false"
                   leftIcon={<EnvelopeIcon className="h-5 w-5" />}
                   error={errors.email?.message}
                   {...register('email', {
@@ -190,6 +272,7 @@ export default function SignupPage() {
                   label="Phone number"
                   type="tel"
                   placeholder="+234 801 234 5678"
+                  autoComplete="tel"
                   leftIcon={<PhoneIcon className="h-5 w-5" />}
                   error={errors.phone_number?.message}
                   {...register('phone_number')}
@@ -205,7 +288,10 @@ export default function SignupPage() {
                 <Button
                   type="button"
                   className="w-full"
-                  onClick={() => setStep(2)}
+                  onClick={async () => {
+                    const valid = await trigger(['first_name', 'last_name', 'email'])
+                    if (valid) setStep(2)
+                  }}
                 >
                   Continue
                 </Button>
@@ -218,26 +304,30 @@ export default function SignupPage() {
                 animate={{ opacity: 1, x: 0 }}
                 className="space-y-5"
               >
-                <Input
-                  label="Password"
-                  type="password"
-                  placeholder="••••••••"
-                  leftIcon={<LockClosedIcon className="h-5 w-5" />}
-                  hint="Must be at least 8 characters"
-                  error={errors.password?.message}
-                  {...register('password', {
-                    required: 'Password is required',
-                    minLength: {
-                      value: 8,
-                      message: 'Password must be at least 8 characters',
-                    },
-                  })}
-                />
+                <div>
+                  <Input
+                    label="Password"
+                    type="password"
+                    placeholder="••••••••"
+                    autoComplete="new-password"
+                    leftIcon={<LockClosedIcon className="h-5 w-5" />}
+                    error={errors.password?.message}
+                    {...register('password', {
+                      required: 'Password is required',
+                      minLength: {
+                        value: 8,
+                        message: 'Password must be at least 8 characters',
+                      },
+                    })}
+                  />
+                  <PasswordStrengthMeter password={password} />
+                </div>
 
                 <Input
                   label="Confirm password"
                   type="password"
                   placeholder="••••••••"
+                  autoComplete="new-password"
                   leftIcon={<LockClosedIcon className="h-5 w-5" />}
                   error={errors.confirm_password?.message}
                   {...register('confirm_password', {
