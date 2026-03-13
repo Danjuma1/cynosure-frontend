@@ -11,8 +11,10 @@ import {
   BuildingOffice2Icon,
   ChevronRightIcon,
   ArrowRightIcon,
+  DocumentTextIcon,
 } from '@heroicons/react/24/outline'
 import { search, QUICK_LINKS } from '@/data/searchIndex'
+import { searchAPI } from '@/services/api'
 
 // ─── Type config ──────────────────────────────────────────────────────────────
 
@@ -47,6 +49,92 @@ const TYPE_CONFIG = {
     bg: 'bg-indigo-50',
     badge: 'bg-indigo-100 text-indigo-700',
   },
+  Case: {
+    icon: ScaleIcon,
+    color: 'text-amber-600',
+    bg: 'bg-amber-50',
+    badge: 'bg-amber-100 text-amber-700',
+  },
+  Document: {
+    icon: DocumentTextIcon,
+    color: 'text-gray-600',
+    bg: 'bg-gray-50',
+    badge: 'bg-gray-100 text-gray-600',
+  },
+}
+
+// ─── Map API response to display entries ──────────────────────────────────────
+
+const FEDERAL_CODES = new Set(['CA', 'FHC', 'NIC', 'NICN'])
+
+function mapApiResults(data) {
+  const mapped = []
+
+  // Courts
+  data.courts?.forEach(c => {
+    let href = null
+    const code = (c.code || '').toUpperCase()
+    if (FEDERAL_CODES.has(code)) {
+      // Normalise NICN → NIC to match the route
+      href = `/csi/federal/${code === 'NICN' ? 'NIC' : code}`
+    }
+    mapped.push({
+      id: `api-court-${c.id}`,
+      type: 'Court',
+      title: c.name,
+      subtitle: [c.court_type_display, c.state_display].filter(Boolean).join(' · '),
+      href,
+    })
+  })
+
+  // Judges
+  data.judges?.forEach(j => {
+    mapped.push({
+      id: `api-judge-${j.id}`,
+      type: 'Judge',
+      title: j.formal_name || j.full_name || `${j.first_name} ${j.last_name}`,
+      subtitle: [j.court_name, j.division_name].filter(Boolean).join(' · '),
+      href: '/cause-lists',
+    })
+  })
+
+  // Cases
+  data.cases?.forEach(c => {
+    const title = c.case_number || c.parties || 'Case'
+    const subtitle = [c.court_name, c.status_display].filter(Boolean).join(' · ')
+    mapped.push({
+      id: `api-case-${c.id}`,
+      type: 'Case',
+      title,
+      subtitle,
+      href: '/cause-lists',
+    })
+  })
+
+  // Cause list entries
+  data.cause_lists?.forEach(cl => {
+    const title = cl.case_number || cl.parties || 'Cause List Entry'
+    mapped.push({
+      id: `api-cl-${cl.id}`,
+      type: 'Panel',
+      title,
+      subtitle: 'Cause List',
+      href: '/cause-lists',
+    })
+  })
+
+  // Legal documents (no detail route — shown as locked)
+  data.documents?.forEach(d => {
+    mapped.push({
+      id: `api-doc-${d.id}`,
+      type: 'Document',
+      title: d.title,
+      subtitle: [d.document_type_display, d.category_name].filter(Boolean).join(' · '),
+      href: null,
+    })
+  })
+
+  return mapped
 }
 
 // ─── Highlight matched text ────────────────────────────────────────────────────
@@ -145,42 +233,71 @@ function QuickLinkItem({ link, isSelected, onSelect }) {
 export default function SearchModal({ open, onClose }) {
   const navigate = useNavigate()
   const [query, setQuery] = useState('')
-  const [results, setResults] = useState([])
+  const [localResults, setLocalResults] = useState([])
+  const [apiResults, setApiResults] = useState([])
+  const [isLoading, setIsLoading] = useState(false)
   const [selectedIdx, setSelectedIdx] = useState(-1)
   const inputRef = useRef(null)
 
-  // Run search on query change
+  // Local (instant) search
   useEffect(() => {
     if (query.trim().length < 2) {
-      setResults([])
+      setLocalResults([])
     } else {
-      setResults(search(query, 10))
+      setLocalResults(search(query, 10))
     }
     setSelectedIdx(-1)
+  }, [query])
+
+  // API search with 300ms debounce
+  useEffect(() => {
+    const q = query.trim()
+    if (q.length < 2) {
+      setApiResults([])
+      setIsLoading(false)
+      return
+    }
+
+    setIsLoading(true)
+    const timer = setTimeout(async () => {
+      try {
+        const res = await searchAPI.global({ q })
+        const data = res.data?.results || {}
+        setApiResults(mapApiResults(data))
+      } catch {
+        setApiResults([])
+      } finally {
+        setIsLoading(false)
+      }
+    }, 300)
+
+    return () => clearTimeout(timer)
   }, [query])
 
   // Reset on open/close
   useEffect(() => {
     if (open) {
       setQuery('')
-      setResults([])
+      setLocalResults([])
+      setApiResults([])
       setSelectedIdx(-1)
+      setIsLoading(false)
     }
   }, [open])
 
-  // Global Cmd/Ctrl+K shortcut
-  useEffect(() => {
-    const handler = (e) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-        e.preventDefault()
-        open ? onClose() : (typeof window !== 'undefined' && window.dispatchEvent(new CustomEvent('open-search')))
-      }
-    }
-    window.addEventListener('keydown', handler)
-    return () => window.removeEventListener('keydown', handler)
-  }, [open, onClose])
-
   const isSearching = query.trim().length >= 2
+
+  // Merge local + API results, deduplicating by id
+  const results = (() => {
+    if (!isSearching) return []
+    const seen = new Set()
+    return [...localResults, ...apiResults].filter(r => {
+      if (seen.has(r.id)) return false
+      seen.add(r.id)
+      return true
+    })
+  })()
+
   const listItems = isSearching ? results : QUICK_LINKS
   const totalItems = listItems.length
 
@@ -241,14 +358,21 @@ export default function SearchModal({ open, onClose }) {
 
                 {/* Search Input */}
                 <div className="flex items-center gap-3 px-4 border-b border-gray-100">
-                  <MagnifyingGlassIcon className="h-5 w-5 text-gray-400 flex-shrink-0" />
+                  {isLoading ? (
+                    <svg className="h-5 w-5 text-emerald-500 animate-spin flex-shrink-0" viewBox="0 0 24 24" fill="none">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+                    </svg>
+                  ) : (
+                    <MagnifyingGlassIcon className="h-5 w-5 text-gray-400 flex-shrink-0" />
+                  )}
                   <input
                     ref={inputRef}
                     type="text"
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
                     onKeyDown={handleKeyDown}
-                    placeholder="Search courts, judges, divisions…"
+                    placeholder="Search courts, judges, cases, divisions…"
                     className="flex-1 py-4 text-sm text-charcoal-900 placeholder-gray-400 bg-transparent outline-none"
                     autoComplete="off"
                     spellCheck={false}
@@ -292,6 +416,7 @@ export default function SearchModal({ open, onClose }) {
                     <div className="p-2">
                       <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider px-2 pt-2 pb-3">
                         {results.length} result{results.length !== 1 ? 's' : ''}
+                        {isLoading && <span className="ml-2 normal-case font-normal text-gray-300">— searching…</span>}
                       </p>
                       <div className="space-y-0.5">
                         {results.map((entry, i) => (
@@ -307,12 +432,23 @@ export default function SearchModal({ open, onClose }) {
                     </div>
                   )}
 
+                  {/* Loading with no results yet */}
+                  {isSearching && results.length === 0 && isLoading && (
+                    <div className="py-12 text-center">
+                      <svg className="h-8 w-8 text-emerald-400 animate-spin mx-auto mb-3" viewBox="0 0 24 24" fill="none">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+                      </svg>
+                      <p className="text-sm text-gray-400">Searching…</p>
+                    </div>
+                  )}
+
                   {/* No results */}
-                  {isSearching && results.length === 0 && (
+                  {isSearching && results.length === 0 && !isLoading && (
                     <div className="py-12 text-center">
                       <MagnifyingGlassIcon className="h-8 w-8 text-gray-300 mx-auto mb-3" />
                       <p className="text-sm font-medium text-gray-500">No results for "{query}"</p>
-                      <p className="text-xs text-gray-400 mt-1">Try searching for a court name, judge, or division</p>
+                      <p className="text-xs text-gray-400 mt-1">Try searching for a court name, judge, or case number</p>
                     </div>
                   )}
                 </div>

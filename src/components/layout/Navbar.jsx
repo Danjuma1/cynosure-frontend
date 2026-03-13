@@ -21,12 +21,12 @@ export default function Navbar({ onMenuClick }) {
   const { unreadCount } = useNotificationStore()
   const [searchOpen, setSearchOpen] = useState(false)
 
-  // Global Cmd/Ctrl+K shortcut
+  // Global Cmd/Ctrl+K shortcut — toggle the modal
   useEffect(() => {
     const handler = (e) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
         e.preventDefault()
-        setSearchOpen(true)
+        setSearchOpen(prev => !prev)
       }
     }
     window.addEventListener('keydown', handler)
