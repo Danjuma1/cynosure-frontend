@@ -20,8 +20,6 @@ export { default as CauseListStatusPage } from './CauseListStatusPage'
 // State Courts
 export { default as StateCourtLandingPage } from './state/StateCourtLandingPage'
 export { default as StateHighCourtListPage } from './state/StateHighCourtListPage'
-export { default as StateDivisionsPage } from './state/StateDivisionsPage'
 export { default as StateJudgesPage } from './state/StateJudgesPage'
 export { default as MagistrateListPage } from './state/MagistrateListPage'
-export { default as MagistrateDivisionsPage } from './state/MagistrateDivisionsPage'
 export { default as MagistrateJudgesPage } from './state/MagistrateJudgesPage'

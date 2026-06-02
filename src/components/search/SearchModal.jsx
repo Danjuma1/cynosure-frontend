@@ -94,7 +94,7 @@ function mapApiResults(data) {
       type: 'Judge',
       title: j.formal_name || j.full_name || `${j.first_name} ${j.last_name}`,
       subtitle: [j.court_name, j.division_name].filter(Boolean).join(' · '),
-      href: '/cause-lists',
+      href: '/csi',
     })
   })
 
@@ -107,7 +107,7 @@ function mapApiResults(data) {
       type: 'Case',
       title,
       subtitle,
-      href: '/cause-lists',
+      href: '/csi',
     })
   })
 
@@ -119,7 +119,7 @@ function mapApiResults(data) {
       type: 'Panel',
       title,
       subtitle: 'Cause List',
-      href: '/cause-lists',
+      href: '/csi',
     })
   })
 

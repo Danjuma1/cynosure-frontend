@@ -4,27 +4,17 @@ import { Dialog, Transition } from '@headlessui/react'
 import {
   XMarkIcon,
   HomeIcon,
-  DocumentTextIcon,
-  BriefcaseIcon,
-  BuildingLibraryIcon,
   BellIcon,
   Cog6ToothIcon,
-  ChartBarIcon,
-  ShieldCheckIcon,
   CreditCardIcon,
   ScaleIcon,
-  UsersIcon,
   BookOpenIcon,
   ArchiveBoxIcon,
   NewspaperIcon,
   ClipboardDocumentListIcon,
   SparklesIcon,
-  PhotoIcon,
 } from '@heroicons/react/24/outline'
-import { useAuthStore } from '@/store/authStore'
 import { cn } from '@/utils/helpers'
-
-// ── User navigation ────────────────────────────────────────────────────────
 
 const mainNavigation = [
   { name: 'Dashboard', href: '/dashboard', icon: HomeIcon },
@@ -45,31 +35,6 @@ const userSecondaryNavigation = [
   { name: 'Settings',      href: '/settings',      icon: Cog6ToothIcon },
 ]
 
-// ── Admin / staff navigation ───────────────────────────────────────────────
-
-const adminMainNavigation = [
-  { name: 'Admin Dashboard', href: '/admin', icon: ChartBarIcon },
-]
-
-const adminCsiNavigation = [
-  { name: 'Cause Lists', href: '/admin/cause-lists', icon: PhotoIcon,           desc: 'Upload & publish' },
-  { name: 'Courts',      href: '/admin/courts',      icon: BuildingLibraryIcon, desc: 'Add / edit courts' },
-  { name: 'Judges',      href: '/admin/judges',      icon: ScaleIcon,           desc: 'Add / edit judges' },
-  { name: 'Cases',       href: '/admin/cases',       icon: BriefcaseIcon,       desc: 'Manage cases' },
-]
-
-const adminSystemNavigation = [
-  { name: 'Users',           href: '/admin/users',   icon: UsersIcon },
-  { name: 'System Settings', href: '/admin/system',  icon: ShieldCheckIcon },
-]
-
-const adminAccountNavigation = [
-  { name: 'Notifications', href: '/notifications', icon: BellIcon },
-  { name: 'Settings',      href: '/settings',      icon: Cog6ToothIcon },
-]
-
-// ── Shared components ──────────────────────────────────────────────────────
-
 function NavItem({ item, isActive }) {
   return (
     <Link
@@ -83,28 +48,6 @@ function NavItem({ item, isActive }) {
     >
       <item.icon className="h-5 w-5 flex-shrink-0" />
       <span className="flex-1 min-w-0 truncate">{item.name}</span>
-    </Link>
-  )
-}
-
-function AdminCsiItem({ item, isActive }) {
-  return (
-    <Link
-      to={item.href}
-      className={cn(
-        'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all group',
-        isActive
-          ? 'bg-emerald-700 text-white'
-          : 'text-gray-600 hover:bg-gray-100 hover:text-charcoal-900'
-      )}
-    >
-      <item.icon className="h-5 w-5 flex-shrink-0" />
-      <div className="flex-1 min-w-0">
-        <p className="truncate leading-none">{item.name}</p>
-        {item.desc && !isActive && (
-          <p className="text-[10px] text-gray-400 group-hover:text-gray-500 truncate mt-0.5">{item.desc}</p>
-        )}
-      </div>
     </Link>
   )
 }
@@ -137,89 +80,7 @@ function FeatureNavItem({ item, isActive }) {
   return item.active ? <Link to={item.href}>{inner}</Link> : <div>{inner}</div>
 }
 
-// ── Admin sidebar body ─────────────────────────────────────────────────────
-
-function AdminSidebarContent() {
-  const location = useLocation()
-  const isActive = (href) =>
-    location.pathname === href || location.pathname.startsWith(href + '/')
-
-  return (
-    <div className="flex flex-col h-full">
-      {/* Logo + staff badge */}
-      <div className="px-4 py-5 border-b border-gray-100">
-        <Link to="/admin" className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-xl bg-gradient-brand flex items-center justify-center flex-shrink-0">
-            <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
-            </svg>
-          </div>
-          <div>
-            <span className="font-display font-bold text-lg text-charcoal-900 leading-tight">Cynosure</span>
-            <p className="text-[10px] font-semibold text-emerald-600 uppercase tracking-widest leading-none mt-0.5">
-              Staff Portal
-            </p>
-          </div>
-        </Link>
-      </div>
-
-      <nav className="flex-1 px-3 py-4 overflow-y-auto">
-        {/* Overview */}
-        <div className="space-y-0.5">
-          {adminMainNavigation.map((item) => (
-            <NavItem key={item.href} item={item} isActive={isActive(item.href)} />
-          ))}
-        </div>
-
-        {/* CSI Management */}
-        <div className="pt-4 mt-3 border-t border-gray-100">
-          <p className="px-3 mb-2 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
-            CSI Management
-          </p>
-          <div className="space-y-0.5">
-            {adminCsiNavigation.map((item) => (
-              <AdminCsiItem key={item.href} item={item} isActive={isActive(item.href)} />
-            ))}
-          </div>
-        </div>
-
-        {/* System */}
-        <div className="pt-4 mt-3 border-t border-gray-100">
-          <p className="px-3 mb-2 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
-            System
-          </p>
-          <div className="space-y-0.5">
-            {adminSystemNavigation.map((item) => (
-              <NavItem key={item.href} item={item} isActive={isActive(item.href)} />
-            ))}
-          </div>
-        </div>
-
-        {/* Account */}
-        <div className="pt-4 mt-3 border-t border-gray-100">
-          <div className="space-y-0.5">
-            {adminAccountNavigation.map((item) => (
-              <NavItem key={item.href} item={item} isActive={isActive(item.href)} />
-            ))}
-          </div>
-        </div>
-      </nav>
-
-      <div className="px-4 py-4 border-t border-gray-100">
-        <div className="rounded-xl bg-emerald-50 border border-emerald-100 p-3">
-          <p className="text-xs font-semibold text-emerald-800">Staff Portal</p>
-          <p className="text-[11px] text-emerald-700 mt-0.5 leading-relaxed">
-            Upload cause list photos and manage all CSI data.
-          </p>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// ── User sidebar body ──────────────────────────────────────────────────────
-
-function UserSidebarContent() {
+function SidebarContent() {
   const location = useLocation()
   const isActive = (href) =>
     location.pathname === href || location.pathname.startsWith(href + '/')
@@ -271,13 +132,6 @@ function UserSidebarContent() {
       </div>
     </div>
   )
-}
-
-// ── Root ───────────────────────────────────────────────────────────────────
-
-function SidebarContent() {
-  const { isAdmin } = useAuthStore()
-  return isAdmin() ? <AdminSidebarContent /> : <UserSidebarContent />
 }
 
 export default function Sidebar({ isOpen, onClose }) {

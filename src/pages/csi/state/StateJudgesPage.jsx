@@ -13,7 +13,7 @@ import { Card, EmptyState } from '@/components/common'
 import { judgesAPI, courtsAPI } from '@/services/api'
 
 export default function StateJudgesPage() {
-  const { courtId, divisionId } = useParams()
+  const { courtId } = useParams()
   const navigate = useNavigate()
 
   const { data: courtData, isLoading: courtLoading } = useQuery({
@@ -22,22 +22,15 @@ export default function StateJudgesPage() {
     enabled: !!courtId,
   })
 
-  const { data: divisionData, isLoading: divisionLoading } = useQuery({
-    queryKey: ['division', divisionId],
-    queryFn: () => courtsAPI.getDivision(divisionId),
-    enabled: !!divisionId,
-  })
-
   const { data: judgesData, isLoading: judgesLoading, isError, refetch } = useQuery({
-    queryKey: ['judges', 'SHC', courtId, divisionId],
-    queryFn: () => judgesAPI.list({ court: courtId, division: divisionId, is_active: true, page_size: 50 }),
-    enabled: !!courtId && !!divisionId,
+    queryKey: ['judges', 'SHC', courtId],
+    queryFn: () => judgesAPI.list({ court: courtId, is_active: true, page_size: 50 }),
+    enabled: !!courtId,
   })
 
   const court = courtData?.data
-  const division = divisionData?.data
   const judges = judgesData?.data?.results || []
-  const isLoading = courtLoading || divisionLoading || judgesLoading
+  const isLoading = courtLoading || judgesLoading
 
   return (
     <div className="space-y-6">
@@ -53,12 +46,8 @@ export default function StateJudgesPage() {
         <span>/</span>
         <Link to="/csi/state/high-court" className="hover:text-emerald-700">State High Courts</Link>
         <span>/</span>
-        <Link to={`/csi/state/high-court/${courtId}`} className="hover:text-emerald-700">
-          {courtLoading ? '…' : (court?.name || 'Court')}
-        </Link>
-        <span>/</span>
         <span className="text-charcoal-900 font-medium">
-          {divisionLoading ? '…' : (division?.name || 'Division')}
+          {courtLoading ? '…' : (court?.name || 'Court')}
         </span>
       </motion.nav>
 
@@ -69,13 +58,14 @@ export default function StateJudgesPage() {
             <BuildingLibraryIcon className="h-6 w-6 text-purple-700" />
           </div>
           <div>
-            {divisionLoading
-              ? <div className="skeleton h-7 w-48 rounded mb-1" />
-              : <h1 className="text-2xl font-display font-bold text-charcoal-900">{division?.name}</h1>
+            {courtLoading
+              ? <div className="skeleton h-7 w-56 rounded mb-1" />
+              : <h1 className="text-2xl font-display font-bold text-charcoal-900">{court?.name}</h1>
             }
-            <p className="text-gray-500 text-sm">{court?.name}</p>
+            <p className="text-gray-500 text-sm">State High Court{court?.city ? ` · ${court.city}` : ''}</p>
           </div>
         </div>
+        {court?.address && <p className="text-sm text-gray-500 mt-2">{court.address}</p>}
         <p className="text-gray-600 mt-2 text-sm">
           Select a judge to view their daily cause list and sitting status.
         </p>
@@ -96,14 +86,14 @@ export default function StateJudgesPage() {
       {/* Judges */}
       {isLoading ? (
         <div className="grid md:grid-cols-2 gap-4">
-          {[1, 2, 3].map((i) => <div key={i} className="skeleton h-28 rounded-xl" />)}
+          {[1, 2, 3, 4].map((i) => <div key={i} className="skeleton h-28 rounded-xl" />)}
         </div>
       ) : judges.length === 0 && !isError ? (
         <Card className="p-12">
           <EmptyState
             icon={<ScaleIcon className="h-12 w-12 text-gray-400" />}
             title="No judges found"
-            description="No judges found for this division. Data may not yet be available in the system."
+            description="No judges found for this court. Data may not yet be available in the system."
           />
         </Card>
       ) : (
@@ -116,7 +106,7 @@ export default function StateJudgesPage() {
               transition={{ delay: i * 0.06 }}
             >
               <button
-                onClick={() => navigate(`/csi/state/high-court/${courtId}/${divisionId}/${judge.id}`)}
+                onClick={() => navigate(`/csi/state/high-court/${courtId}/${judge.id}`)}
                 className="w-full text-left"
               >
                 <Card className="p-4 hover:shadow-card-hover hover:border-purple-200 transition-all group border border-gray-100">
@@ -150,11 +140,11 @@ export default function StateJudgesPage() {
 
       <div>
         <Link
-          to={`/csi/state/high-court/${courtId}`}
+          to="/csi/state/high-court"
           className="flex items-center gap-1 text-sm text-gray-500 hover:text-emerald-700 w-fit"
         >
           <ChevronLeftIcon className="h-4 w-4" />
-          Back to Divisions
+          Back to States
         </Link>
       </div>
     </div>

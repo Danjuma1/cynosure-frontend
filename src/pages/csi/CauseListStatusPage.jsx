@@ -10,8 +10,8 @@
  *  - CA:   /csi/federal/CA/:courtId/:panelId
  *  - FHC:  /csi/federal/FHC/:courtId/:judgeId
  *  - NIC:  /csi/federal/NIC/:courtId/:judgeId
- *  - HC:   /csi/state/high-court/:courtId/:divisionId/:judgeId
- *  - Mag:  /csi/state/magistrate/:courtId/:divisionId/:judgeId
+ *  - HC:   /csi/state/high-court/:courtId/:judgeId
+ *  - Mag:  /csi/state/magistrate/:courtId/:judgeId
  */
 import { useState } from 'react'
 import { Link, useParams, useLocation } from 'react-router-dom'
@@ -225,7 +225,10 @@ export default function CauseListStatusPage() {
       crumbs.push({ label: 'State Courts', href: '/csi/state' })
       crumbs.push({ label: stateListLabel, href: stateBase })
       crumbs.push({ label: court?.name || '…', href: `${stateBase}/${courtId}` })
-      crumbs.push({ label: division?.name || '…', href: `${stateBase}/${courtId}/${divisionId}` })
+      // State High Courts list judges directly; only magistrate courts have a division level
+      if (divisionId) {
+        crumbs.push({ label: division?.name || '…', href: `${stateBase}/${courtId}/${divisionId}` })
+      }
       crumbs.push({ label: judge?.formal_name || '…' })
     }
     return crumbs

@@ -105,7 +105,7 @@ export default function MagistrateListPage() {
                       </p>
                     )}
                     <div className="mt-3 pt-3 border-t border-gray-100">
-                      <span className="text-xs text-teal-600 font-medium">View Divisions →</span>
+                      <span className="text-xs text-teal-600 font-medium">View Magistrates →</span>
                     </div>
                   </Card>
                 </Link>

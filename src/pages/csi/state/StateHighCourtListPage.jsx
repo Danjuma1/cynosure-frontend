@@ -105,7 +105,7 @@ export default function StateHighCourtListPage() {
                       </p>
                     )}
                     <div className="mt-3 pt-3 border-t border-gray-100">
-                      <span className="text-xs text-purple-600 font-medium">View Divisions & Judges →</span>
+                      <span className="text-xs text-purple-600 font-medium">View Judges →</span>
                     </div>
                   </Card>
                 </Link>
