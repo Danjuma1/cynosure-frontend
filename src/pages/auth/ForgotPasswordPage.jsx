@@ -38,11 +38,11 @@ export default function ForgotPasswordPage() {
   const handleVerifyOTP = async (data) => {
     setIsLoading(true)
     try {
-      const response = await authAPI.verifyPasswordResetOTP({
+      await authAPI.verifyPasswordResetOTP({
         email,
         otp: data.otp,
       })
-      setResetToken(response.data.data.reset_token)
+      setResetToken(data.otp)
       toast.success('OTP verified')
       setStep(3)
     } catch (error) {
@@ -57,9 +57,9 @@ export default function ForgotPasswordPage() {
     try {
       await authAPI.confirmPasswordReset({
         email,
-        reset_token: resetToken,
-        password: data.password,
-        password_confirm: data.password_confirm,
+        otp: resetToken,
+        new_password: data.password,
+        confirm_password: data.password_confirm,
       })
       toast.success('Password reset successful!')
       navigate('/login')
