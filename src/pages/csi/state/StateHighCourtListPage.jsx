@@ -19,7 +19,14 @@ export default function StateHighCourtListPage() {
     queryFn: () => courtsAPI.list({ court_type: 'SHC', page_size: 50, ordering: 'name' }),
   })
 
-  const courts = data?.data?.results || []
+  const { data: fctData } = useQuery({
+    queryKey: ['courts', 'FCT'],
+    queryFn: () => courtsAPI.list({ court_type: 'FCT', page_size: 10, ordering: 'name' }),
+  })
+
+  const shcCourts = data?.data?.results || []
+  const fctCourts = fctData?.data?.results || []
+  const courts = [...fctCourts, ...shcCourts]
   const active = courts.filter((c) => c.is_active)
   const inactive = courts.filter((c) => !c.is_active)
 
