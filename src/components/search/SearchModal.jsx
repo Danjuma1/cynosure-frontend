@@ -65,6 +65,19 @@ const TYPE_CONFIG = {
 
 // ─── Map API response to display entries ──────────────────────────────────────
 
+function judgeHref(j) {
+  const courtId = j.court
+  const judgeId = j.id
+  if (!courtId || !judgeId) return null
+  const type = j.court_type
+  if (type === 'FHC') return `/csi/federal/FHC/${courtId}/${judgeId}`
+  if (type === 'NIC') return `/csi/federal/NIC/${courtId}/${judgeId}`
+  if (type === 'CA') return `/csi/federal/CA/${courtId}/${judgeId}`
+  if (type === 'SHC' || type === 'FCT') return `/csi/state/high-court/${courtId}/${judgeId}`
+  if (type === 'MC' || type === 'AC' || type === 'CC') return `/csi/state/magistrate/${courtId}/${judgeId}`
+  return null
+}
+
 const FEDERAL_CODES = new Set(['CA', 'FHC', 'NIC', 'NICN'])
 
 function mapApiResults(data) {
@@ -94,7 +107,7 @@ function mapApiResults(data) {
       type: 'Judge',
       title: j.formal_name || j.full_name || `${j.first_name} ${j.last_name}`,
       subtitle: [j.court_name, j.division_name].filter(Boolean).join(' · '),
-      href: '/csi',
+      href: judgeHref(j),
     })
   })
 
@@ -385,9 +398,13 @@ export default function SearchModal({ open, onClose }) {
                       <XMarkIcon className="h-4 w-4" />
                     </button>
                   )}
-                  <kbd className="hidden sm:flex items-center gap-1 text-[10px] text-gray-400 bg-gray-100 border border-gray-200 rounded px-1.5 py-1 font-mono">
-                    Esc
-                  </kbd>
+                  <button
+                    onClick={onClose}
+                    className="p-1.5 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100 flex-shrink-0"
+                    aria-label="Close search"
+                  >
+                    <XMarkIcon className="h-5 w-5" />
+                  </button>
                 </div>
 
                 {/* Body */}

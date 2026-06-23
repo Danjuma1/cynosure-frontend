@@ -13,6 +13,7 @@ import {
   NewspaperIcon,
   ClipboardDocumentListIcon,
   SparklesIcon,
+  BriefcaseIcon,
 } from '@heroicons/react/24/outline'
 import { cn } from '@/utils/helpers'
 
@@ -21,12 +22,13 @@ const mainNavigation = [
 ]
 
 const featureNavigation = [
-  { name: 'Court Sitting Information', abbr: 'CSI', href: '/csi', icon: ScaleIcon, active: true },
-  { name: 'Law Reports',               abbr: 'LR',  href: null,   icon: BookOpenIcon,              active: false },
-  { name: 'Law Repository',            abbr: 'LRP', href: null,   icon: ArchiveBoxIcon,            active: false },
-  { name: 'News & Legal Updates',      abbr: 'NLU', href: null,   icon: NewspaperIcon,             active: false },
-  { name: 'E-Filing & Time',           abbr: 'ECT', href: null,   icon: ClipboardDocumentListIcon, active: false },
-  { name: 'AI Drafting',               abbr: 'AI',  href: null,   icon: SparklesIcon,              active: false },
+  { name: 'Court Sitting Information', abbr: 'CSI', href: '/csi',           icon: ScaleIcon,                 active: true },
+  { name: 'Brief Connect',             abbr: 'BC',  href: '/brief-connect', icon: BriefcaseIcon,             active: true },
+  { name: 'Law Reports',               abbr: 'LR',  href: null,             icon: BookOpenIcon,              active: false },
+  { name: 'Law Repository',            abbr: 'LRP', href: null,             icon: ArchiveBoxIcon,            active: false },
+  { name: 'News & Legal Updates',      abbr: 'NLU', href: null,             icon: NewspaperIcon,             active: false },
+  { name: 'E-Filing & Time',           abbr: 'ECT', href: null,             icon: ClipboardDocumentListIcon, active: false },
+  { name: 'AI Drafting',               abbr: 'AI',  href: null,             icon: SparklesIcon,              active: false },
 ]
 
 const userSecondaryNavigation = [

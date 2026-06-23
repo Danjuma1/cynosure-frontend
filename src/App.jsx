@@ -39,6 +39,14 @@ import {
   MagistrateJudgesPage,
 } from '@/pages/csi'
 
+// Brief Connect Pages
+import {
+  BriefConnectPage,
+  PostBriefPage,
+  BriefRequestDetailPage,
+  MyBriefsPage,
+} from '@/pages/brief-connect'
+
 // Notifications Pages
 import { NotificationsPage } from '@/pages/notifications'
 
@@ -157,6 +165,12 @@ export default function App() {
         <Route path="/csi/state/magistrate" element={<MagistrateListPage />} />
         <Route path="/csi/state/magistrate/:courtId" element={<MagistrateJudgesPage />} />
         <Route path="/csi/state/magistrate/:courtId/:judgeId" element={<CauseListStatusPage />} />
+
+        {/* ── Brief Connect ──────────────────────────────────── */}
+        <Route path="/brief-connect" element={<BriefConnectPage />} />
+        <Route path="/brief-connect/post" element={<PostBriefPage />} />
+        <Route path="/brief-connect/my-briefs" element={<MyBriefsPage />} />
+        <Route path="/brief-connect/requests/:id" element={<BriefRequestDetailPage />} />
 
         {/* Notifications */}
         <Route path="/notifications" element={<NotificationsPage />} />

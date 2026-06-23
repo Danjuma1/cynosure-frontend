@@ -27,11 +27,71 @@ import {
   XCircleIcon,
   QuestionMarkCircleIcon,
   PhotoIcon,
+  PlusIcon,
+  ArrowRightIcon,
+  BanknotesIcon,
+  UserIcon,
 } from '@heroicons/react/24/outline'
-import { Card, EmptyState } from '@/components/common'
-import { causeListsAPI, judgesAPI, courtsAPI } from '@/services/api'
-import { formatDate, formatTime } from '@/utils/helpers'
+import { Card, Button, EmptyState } from '@/components/common'
+import { causeListsAPI, judgesAPI, courtsAPI, briefConnectAPI } from '@/services/api'
+import { formatDate, formatTime, formatNumber } from '@/utils/helpers'
 import CauseListImageViewer from '@/components/cause-lists/CauseListImageViewer'
+
+const BRIEF_TYPE_COLORS = {
+  mention:                'bg-blue-100 text-blue-700',
+  argue_motion:           'bg-orange-100 text-orange-700',
+  full_appearance:        'bg-emerald-100 text-emerald-700',
+  file_process:           'bg-violet-100 text-violet-700',
+  collect_certified_copy: 'bg-teal-100 text-teal-700',
+  other:                  'bg-gray-100 text-gray-600',
+}
+
+function BriefRequestMini({ req }) {
+  return (
+    <Link to={`/brief-connect/requests/${req.id}`}>
+      <Card className="p-4 hover:border-blue-200 hover:shadow-sm transition-all group">
+        <div className="flex items-start gap-3">
+          <div className="flex-1 min-w-0">
+            <div className="flex flex-wrap items-center gap-2 mb-1.5">
+              <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${BRIEF_TYPE_COLORS[req.brief_type] || 'bg-gray-100 text-gray-600'}`}>
+                {req.brief_type_display}
+              </span>
+              {req.has_applied && (
+                <span className="text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full flex items-center gap-1">
+                  <CheckCircleIcon className="h-3 w-3" />
+                  Applied
+                </span>
+              )}
+            </div>
+            {(req.case_number || req.parties) && (
+              <p className="text-sm text-charcoal-900 font-medium line-clamp-1">
+                {req.case_number && <span className="text-gray-500 font-normal">{req.case_number} · </span>}
+                {req.parties}
+              </p>
+            )}
+            <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500 mt-1">
+              <span className="flex items-center gap-1">
+                <UserIcon className="h-3.5 w-3.5" />
+                {req.requester_name}
+              </span>
+              {req.offered_fee ? (
+                <span className="flex items-center gap-1 text-emerald-600 font-medium">
+                  <BanknotesIcon className="h-3.5 w-3.5" />
+                  ₦{formatNumber(req.offered_fee)}
+                  {req.fee_negotiable && <span className="text-gray-400 font-normal">(neg.)</span>}
+                </span>
+              ) : (
+                <span>Fee negotiable</span>
+              )}
+              <span>{req.application_count} applicant{req.application_count !== 1 ? 's' : ''}</span>
+            </div>
+          </div>
+          <ArrowRightIcon className="h-4 w-4 text-gray-300 group-hover:text-blue-500 flex-shrink-0 mt-1 transition-colors" />
+        </div>
+      </Card>
+    </Link>
+  )
+}
 
 // ── Sitting status config ────────────────────────────────────────────────────
 const SITTING_STATUS = {
@@ -240,6 +300,19 @@ export default function CauseListStatusPage() {
     return `${ctx.basePath}/${courtId}`
   })()
 
+  // Fetch open brief requests for this judge + selected date
+  const { data: briefReqData } = useQuery({
+    queryKey: ['brief-connect', 'csi', judgeId, selectedDate],
+    queryFn: () => briefConnectAPI.listRequests({
+      judge: judgeId,
+      hearing_date: selectedDate,
+      status: 'open',
+      page_size: 20,
+    }),
+    enabled: !!judgeId && ctx.entityType === 'judge',
+  })
+  const briefRequests = briefReqData?.data?.results || []
+
   // Fetch cause list(s)
   const { data: causeListData, isLoading } = useQuery({
     queryKey: ['causeList', 'status', entityId, selectedDate],
@@ -306,15 +379,37 @@ export default function CauseListStatusPage() {
             )}
           </div>
 
-          {/* Date Picker */}
-          <div className="flex flex-col gap-1">
-            <label className="text-xs text-gray-500 font-medium">Viewing date</label>
-            <input
-              type="date"
-              value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
-              className="input-field w-44 text-sm"
-            />
+          <div className="flex flex-col sm:flex-row items-start sm:items-end gap-3">
+            {/* Post Brief Request — judge pages only */}
+            {ctx.entityType === 'judge' && judge && (
+              <Link
+                to="/brief-connect/post"
+                state={{
+                  judge_id: judgeId,
+                  judge_name: judge.formal_name,
+                  court_id: courtId,
+                  court_name: court?.name,
+                  hearing_date: selectedDate,
+                  returnTo: location.pathname,
+                }}
+              >
+                <Button size="sm" className="flex items-center gap-1.5 whitespace-nowrap">
+                  <PlusIcon className="h-4 w-4" />
+                  Post Brief Request
+                </Button>
+              </Link>
+            )}
+
+            {/* Date Picker */}
+            <div className="flex flex-col gap-1">
+              <label className="text-xs text-gray-500 font-medium">Viewing date</label>
+              <input
+                type="date"
+                value={selectedDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
+                className="input-field w-44 text-sm"
+              />
+            </div>
           </div>
         </div>
       </motion.div>
@@ -479,6 +574,42 @@ export default function CauseListStatusPage() {
           </>
         )}
       </motion.div>
+
+      {/* Brief Requests for this judge on this date */}
+      {ctx.entityType === 'judge' && (briefRequests.length > 0) && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+        >
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-lg font-display font-semibold text-charcoal-900 flex items-center gap-2">
+              <BriefcaseIcon className="h-5 w-5 text-gray-500" />
+              Brief Requests — {formatDate(selectedDate)}
+              <span className="text-sm font-normal text-gray-400">({briefRequests.length})</span>
+            </h2>
+            <Link
+              to="/brief-connect/post"
+              state={{
+                judge_id: judgeId,
+                judge_name: judge?.formal_name,
+                court_id: courtId,
+                court_name: court?.name,
+                hearing_date: selectedDate,
+                returnTo: location.pathname,
+              }}
+              className="text-xs font-medium text-blue-600 hover:text-blue-700"
+            >
+              + Post yours
+            </Link>
+          </div>
+          <div className="space-y-2">
+            {briefRequests.map((req) => (
+              <BriefRequestMini key={req.id} req={req} />
+            ))}
+          </div>
+        </motion.div>
+      )}
 
       {/* Last Updated */}
       {primaryCauseList?.updated_at && (

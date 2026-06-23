@@ -8,6 +8,7 @@ import {
   NewspaperIcon,
   ClipboardDocumentListIcon,
   SparklesIcon,
+  BriefcaseIcon,
   BellIcon,
   ArrowRightIcon,
   CheckBadgeIcon,
@@ -30,6 +31,16 @@ const features = [
     color: 'emerald',
     active: true,
     stats: ['Federal Courts', 'State High Courts', 'Magistrate Courts'],
+  },
+  {
+    name: 'Brief Connect',
+    abbr: 'BC',
+    description: 'Need another lawyer to hold your brief? Post a request. Available in court? Apply to help a colleague.',
+    href: '/brief-connect',
+    icon: BriefcaseIcon,
+    color: 'blue',
+    active: true,
+    stats: ['Hold Brief', 'Argue Motions', 'Full Appearances'],
   },
   {
     name: 'Law Reports',
@@ -97,7 +108,8 @@ export default function DashboardPage() {
   const recentNotifs = notifData?.data?.recent || []
   const today = new Date().toLocaleDateString('en-NG', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
 
-  const [csi, ...comingSoon] = features
+  const liveFeatures = features.filter((f) => f.active)
+  const comingSoon = features.filter((f) => !f.active)
 
   return (
     <div className="space-y-8">
@@ -118,40 +130,49 @@ export default function DashboardPage() {
         </div>
       </motion.div>
 
-      {/* Active Feature — CSI Hero Card */}
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }}>
-        <Link to={csi.href}>
-          <Card className="p-6 border-emerald-200 hover:shadow-card-hover hover:border-emerald-300 transition-all group bg-gradient-to-br from-emerald-50/60 to-white">
-            <div className="flex flex-col sm:flex-row sm:items-start gap-5">
-              <div className="w-14 h-14 rounded-2xl bg-emerald-100 flex items-center justify-center flex-shrink-0">
-                <ScaleIcon className="h-8 w-8 text-emerald-700" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-1">
-                  <h2 className="text-xl font-display font-bold text-charcoal-900 group-hover:text-emerald-700 transition-colors">
-                    {csi.name}
-                  </h2>
-                  <span className="flex items-center gap-1 text-xs font-semibold text-emerald-700 bg-emerald-100 border border-emerald-200 px-2 py-0.5 rounded-full">
-                    <CheckBadgeIcon className="h-3 w-3" />
-                    Live
-                  </span>
-                </div>
-                <p className="text-gray-600 text-sm leading-relaxed">{csi.description}</p>
-                <div className="flex flex-wrap gap-2 mt-3">
-                  {csi.stats.map((s) => (
-                    <span key={s} className="text-xs bg-white border border-emerald-200 text-emerald-700 px-2.5 py-1 rounded-full font-medium">
-                      {s}
-                    </span>
-                  ))}
-                </div>
-              </div>
-              <div className="hidden sm:flex items-center self-center">
-                <ArrowRightIcon className="h-6 w-6 text-gray-300 group-hover:text-emerald-600 group-hover:translate-x-1 transition-all" />
-              </div>
-            </div>
-          </Card>
-        </Link>
-      </motion.div>
+      {/* Live Features */}
+      <div className="space-y-4">
+        {liveFeatures.map((feature, i) => {
+          const c = colorMap[feature.color]
+          return (
+            <motion.div key={feature.name} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 + i * 0.06 }}>
+              <Link to={feature.href}>
+                <Card className={`p-6 ${c.border} hover:shadow-card-hover ${c.hover} transition-all group bg-gradient-to-br from-white to-white`}>
+                  <div className="flex flex-col sm:flex-row sm:items-start gap-5">
+                    <div className={`w-14 h-14 rounded-2xl ${c.bg} flex items-center justify-center flex-shrink-0`}>
+                      <feature.icon className={`h-8 w-8 ${c.icon}`} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <h2 className="text-xl font-display font-bold text-charcoal-900 group-hover:text-emerald-700 transition-colors">
+                          {feature.name}
+                        </h2>
+                        <span className="flex items-center gap-1 text-xs font-semibold text-emerald-700 bg-emerald-100 border border-emerald-200 px-2 py-0.5 rounded-full">
+                          <CheckBadgeIcon className="h-3 w-3" />
+                          Live
+                        </span>
+                      </div>
+                      <p className="text-gray-600 text-sm leading-relaxed">{feature.description}</p>
+                      {feature.stats && (
+                        <div className="flex flex-wrap gap-2 mt-3">
+                          {feature.stats.map((s) => (
+                            <span key={s} className={`text-xs bg-white border ${c.border} ${c.icon} px-2.5 py-1 rounded-full font-medium`}>
+                              {s}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <div className="hidden sm:flex items-center self-center">
+                      <ArrowRightIcon className="h-6 w-6 text-gray-300 group-hover:text-emerald-600 group-hover:translate-x-1 transition-all" />
+                    </div>
+                  </div>
+                </Card>
+              </Link>
+            </motion.div>
+          )
+        })}
+      </div>
 
       {/* Coming Soon Features Grid */}
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.16 }}>

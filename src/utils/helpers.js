@@ -207,6 +207,10 @@ const FRIENDLY_ERRORS = {
   'Invalid password.': 'Incorrect password. Please try again.',
   'Account is temporarily locked. Please try again later.': 'Your account is temporarily locked after too many failed attempts. Try again in 30 minutes.',
   'This account has been deactivated.': 'This account has been deactivated. Contact support for help.',
+  // Brief Connect
+  'You have already applied to this request.': "You've already applied to this brief request.",
+  'You cannot apply to your own brief request.': "You can't apply to your own brief request.",
+  'This brief request is no longer open.': 'This brief request is no longer accepting applications.',
   // Network / server
   'Network Error': "Can't reach the server. Check your internet connection and try again.",
   'Request failed with status code 429': 'Too many attempts. Please wait a moment and try again.',

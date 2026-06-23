@@ -187,6 +187,38 @@ export const efilingAPI = {
   }),
 }
 
+// Brief Connect endpoints
+export const briefConnectAPI = {
+  // Requests
+  listRequests: (params) => api.get('/brief-connect/requests/', { params }),
+  getRequest: (id) => api.get(`/brief-connect/requests/${id}/`),
+  postRequest: (data) => api.post('/brief-connect/requests/', data),
+  updateRequest: (id, data) => api.patch(`/brief-connect/requests/${id}/`, data),
+  cancelRequest: (id) => api.delete(`/brief-connect/requests/${id}/`),
+  myRequests: (params) => api.get('/brief-connect/requests/my-requests/', { params }),
+  myApplications: (params) => api.get('/brief-connect/requests/my-applications/', { params }),
+
+  // Applications
+  apply: (requestId, data) => api.post(`/brief-connect/requests/${requestId}/apply/`, data),
+  withdrawApplication: (requestId) => api.post(`/brief-connect/requests/${requestId}/withdraw-application/`),
+  acceptApplication: (requestId, applicationId) =>
+    api.post(`/brief-connect/requests/${requestId}/accept-application/`, { application_id: applicationId }),
+  rejectApplication: (requestId, applicationId) =>
+    api.post(`/brief-connect/requests/${requestId}/reject-application/`, { application_id: applicationId }),
+
+  // Engagements
+  listEngagements: (params) => api.get('/brief-connect/engagements/', { params }),
+  getEngagement: (id) => api.get(`/brief-connect/engagements/${id}/`),
+  startEngagement: (id) => api.post(`/brief-connect/engagements/${id}/start/`),
+  completeEngagement: (id, outcome_notes) =>
+    api.post(`/brief-connect/engagements/${id}/complete/`, { outcome_notes }),
+  disputeEngagement: (id) => api.post(`/brief-connect/engagements/${id}/dispute/`),
+
+  // Reviews
+  submitReview: (data) => api.post('/brief-connect/reviews/', data),
+  listReviews: (params) => api.get('/brief-connect/reviews/', { params }),
+}
+
 // Admin endpoints
 export const adminAPI = {
   getDashboard: () => api.get('/admin/dashboard/'),
