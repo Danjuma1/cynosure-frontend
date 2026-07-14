@@ -14,8 +14,14 @@ import {
   ClipboardDocumentListIcon,
   SparklesIcon,
   BriefcaseIcon,
+  ExclamationTriangleIcon,
 } from '@heroicons/react/24/outline'
 import { cn } from '@/utils/helpers'
+import { useAuthStore } from '@/store/authStore'
+
+const adminNavigation = [
+  { name: 'Disputes', href: '/admin/disputes', icon: ExclamationTriangleIcon },
+]
 
 const mainNavigation = [
   { name: 'Dashboard', href: '/dashboard', icon: HomeIcon },
@@ -84,6 +90,8 @@ function FeatureNavItem({ item, isActive }) {
 
 function SidebarContent() {
   const location = useLocation()
+  const { user } = useAuthStore()
+  const isAdmin = user?.user_type === 'super_admin' || user?.user_type === 'registry_staff'
   const isActive = (href) =>
     location.pathname === href || location.pathname.startsWith(href + '/')
 
@@ -114,6 +122,15 @@ function SidebarContent() {
             ))}
           </div>
         </div>
+
+        {isAdmin && (
+          <div className="pt-4 mt-4 border-t border-gray-100">
+            <p className="px-3 mb-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">Admin</p>
+            {adminNavigation.map((item) => (
+              <NavItem key={item.href} item={item} isActive={isActive(item.href)} />
+            ))}
+          </div>
+        )}
 
         <div className="pt-4 mt-4 border-t border-gray-100">
           <p className="px-3 mb-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">Account</p>

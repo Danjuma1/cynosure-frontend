@@ -20,8 +20,10 @@ import {
   CheckCircleIcon,
   ClockIcon,
   ArrowRightIcon,
+  ChatBubbleLeftRightIcon,
 } from '@heroicons/react/24/outline'
 import { Card, Button, EmptyState, Tabs } from '@/components/common'
+import AnonymousName from '@/components/brief-connect/AnonymousName'
 import { briefConnectAPI } from '@/services/api'
 import { formatDate, formatNumber, timeAgo } from '@/utils/helpers'
 
@@ -113,7 +115,7 @@ function ApplicationRow({ req }) {
               </p>
             )}
             <p className="text-xs text-gray-400 mt-1">
-              Posted by {req.requester_name} · {timeAgo(req.created_at)}
+              Posted by <AnonymousName name={req.requester_name} /> · {timeAgo(req.created_at)}
             </p>
           </div>
           <ArrowRightIcon className="h-4 w-4 text-gray-300 group-hover:text-blue-400 flex-shrink-0 mt-1 transition-colors" />
@@ -125,8 +127,8 @@ function ApplicationRow({ req }) {
 
 function EngagementRow({ eng }) {
   return (
-    <Link to={`/brief-connect/requests/${eng.brief_request}`}>
-      <Card className="p-4 hover:border-emerald-200 hover:shadow-sm transition-all group">
+    <Card className="p-4 hover:border-emerald-200 hover:shadow-sm transition-all group">
+      <Link to={`/brief-connect/requests/${eng.brief_request}`} className="block">
         <div className="flex items-start gap-3">
           <div className="flex-1 min-w-0">
             <div className="flex flex-wrap items-center gap-2 mb-1">
@@ -155,14 +157,23 @@ function EngagementRow({ eng }) {
               )}
               <span className="flex items-center gap-1">
                 <UserIcon className="h-3.5 w-3.5" />
-                {eng.holding_lawyer_name}
+                <AnonymousName name={eng.holding_lawyer_name} />
               </span>
             </div>
           </div>
           <ArrowRightIcon className="h-4 w-4 text-gray-300 group-hover:text-emerald-500 flex-shrink-0 mt-1 transition-colors" />
         </div>
-      </Card>
-    </Link>
+      </Link>
+      <div className="mt-3 pt-3 border-t border-gray-100 flex justify-end">
+        <Link
+          to={`/brief-connect/engagements/${eng.id}/chat`}
+          className="flex items-center gap-1.5 text-xs font-medium text-emerald-700 hover:text-emerald-800"
+        >
+          <ChatBubbleLeftRightIcon className="h-3.5 w-3.5" />
+          Open Chat
+        </Link>
+      </div>
+    </Card>
   )
 }
 

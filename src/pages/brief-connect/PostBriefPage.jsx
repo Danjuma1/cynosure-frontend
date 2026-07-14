@@ -22,6 +22,9 @@ import {
   BuildingLibraryIcon,
 } from '@heroicons/react/24/outline'
 import { Card, Button } from '@/components/common'
+import PolicyAcceptModal from '@/components/brief-connect/PolicyAcceptModal'
+import FeeCalculator from '@/components/brief-connect/FeeCalculator'
+import { usePolicyGate } from '@/hooks/usePolicyGate'
 import { briefConnectAPI, judgesAPI } from '@/services/api'
 import { getErrorMessage } from '@/utils/helpers'
 import toast from 'react-hot-toast'
@@ -61,6 +64,7 @@ export default function PostBriefPage() {
   })
   const [error, setError] = useState('')
   const [judgeDropdownOpen, setJudgeDropdownOpen] = useState(false)
+  const policyGate = usePolicyGate('posting')
 
   // Fetch judges matching search term
   const { data: judgesData, isFetching: judgesFetching } = useQuery({
@@ -104,7 +108,7 @@ export default function PostBriefPage() {
       return
     }
 
-    mutation.mutate({
+    policyGate.runProtected(() => mutation.mutate({
       judge: selectedJudge.id,
       // court auto-derived on the backend from judge.court
       hearing_date: form.hearing_date,
@@ -117,7 +121,7 @@ export default function PostBriefPage() {
       deadline: form.deadline || undefined,
       cause_list_entry: form.cause_list_entry || undefined,
       case: form.case || undefined,
-    })
+    }))
   }
 
   const isPrefilled = !!prefill.judge_id || !!prefill.court_id
@@ -329,6 +333,7 @@ export default function PostBriefPage() {
                   placeholder="Leave blank if negotiable"
                   className="input-field w-full text-sm"
                 />
+                <FeeCalculator amount={form.offered_fee} perspective="payer" />
               </div>
               <label className="flex items-center gap-2.5 cursor-pointer">
                 <input
@@ -366,7 +371,7 @@ export default function PostBriefPage() {
           )}
 
           <div className="flex gap-3">
-            <Button type="submit" disabled={mutation.isLoading || !selectedJudge} className="flex-1">
+            <Button type="submit" disabled={mutation.isLoading || policyGate.checking || !selectedJudge} className="flex-1">
               {mutation.isLoading ? 'Posting…' : 'Post Brief Request'}
             </Button>
             <Button as={Link} to="/brief-connect" variant="secondary">
@@ -375,6 +380,8 @@ export default function PostBriefPage() {
           </div>
         </form>
       </motion.div>
+
+      <PolicyAcceptModal {...policyGate.modalProps} />
     </div>
   )
 }

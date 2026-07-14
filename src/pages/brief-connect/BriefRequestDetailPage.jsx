@@ -25,9 +25,16 @@ import {
   CheckCircleIcon,
   XCircleIcon,
   StarIcon,
+  ChatBubbleLeftRightIcon,
 } from '@heroicons/react/24/outline'
 import { StarIcon as StarSolid } from '@heroicons/react/24/solid'
 import { Card, Button, EmptyState } from '@/components/common'
+import AnonymousName from '@/components/brief-connect/AnonymousName'
+import PolicyAcceptModal from '@/components/brief-connect/PolicyAcceptModal'
+import FeeCalculator from '@/components/brief-connect/FeeCalculator'
+import OfferThread from '@/components/brief-connect/OfferThread'
+import EngagementCompletionPanel from '@/components/brief-connect/EngagementCompletionPanel'
+import { usePolicyGate } from '@/hooks/usePolicyGate'
 import { briefConnectAPI } from '@/services/api'
 import { formatDate, formatNumber, timeAgo, getErrorMessage } from '@/utils/helpers'
 import { useAuthStore } from '@/store/authStore'
@@ -62,13 +69,15 @@ function StarRating({ value }) {
   )
 }
 
-function ApplicationCard({ application, isRequester, onAccept, onReject, accepting, rejecting }) {
+function ApplicationCard({ application, isRequester, onAccept, onReject, accepting, rejecting, fallbackFee }) {
   return (
     <Card className="p-4">
       <div className="flex flex-col sm:flex-row sm:items-start gap-4">
         <div className="flex-1 min-w-0">
           <div className="flex flex-wrap items-center gap-2 mb-1">
-            <p className="font-medium text-charcoal-900 text-sm">{application.applicant_name}</p>
+            <p className="font-medium text-charcoal-900 text-sm">
+              <AnonymousName name={application.applicant_name} />
+            </p>
             {application.applicant_title && (
               <span className="text-xs text-gray-500">{application.applicant_title}</span>
             )}
@@ -100,12 +109,15 @@ function ApplicationCard({ application, isRequester, onAccept, onReject, accepti
           {application.message && (
             <p className="text-sm text-gray-600 mt-1">{application.message}</p>
           )}
-          {application.proposed_fee && (
-            <p className="text-sm font-medium text-emerald-700 mt-2 flex items-center gap-1">
-              <BanknotesIcon className="h-4 w-4" />
-              ₦{formatNumber(application.proposed_fee)} proposed
-            </p>
-          )}
+          <div className="mt-2">
+            <OfferThread
+              applicationId={application.id}
+              openingAmount={application.proposed_fee ?? fallbackFee}
+              openingProposedByName={application.applicant_name}
+              isRequesterView
+              disabled={application.status !== 'pending'}
+            />
+          </div>
         </div>
 
         {isRequester && application.status === 'pending' && (
@@ -152,10 +164,9 @@ export default function BriefRequestDetailPage() {
   const navigate = useNavigate()
 
   const [applyForm, setApplyForm] = useState({ proposed_fee: '', message: '' })
-  const [reviewForm, setReviewForm] = useState({ rating: 5, comment: '' })
   const [showApplyForm, setShowApplyForm] = useState(false)
-  const [showReviewForm, setShowReviewForm] = useState(false)
   const [applyError, setApplyError] = useState('')
+  const applyPolicyGate = usePolicyGate('applying')
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: ['brief-request', id],
@@ -199,28 +210,6 @@ export default function BriefRequestDetailPage() {
     mutationFn: (applicationId) => briefConnectAPI.rejectApplication(id, applicationId),
     onSuccess: () => {
       toast.success('Application rejected.')
-      refetch()
-    },
-    onError: (err) => toast.error(getErrorMessage(err)),
-  })
-
-  const completeMutation = useMutation({
-    mutationFn: (notes) => briefConnectAPI.completeEngagement(req?.engagement?.id, notes),
-    onSuccess: () => {
-      toast.success('Engagement marked as completed.')
-      refetch()
-    },
-    onError: (err) => toast.error(getErrorMessage(err)),
-  })
-
-  const reviewMutation = useMutation({
-    mutationFn: (payload) => briefConnectAPI.submitReview({
-      engagement: req?.engagement?.id,
-      ...payload,
-    }),
-    onSuccess: () => {
-      toast.success('Review submitted!')
-      setShowReviewForm(false)
       refetch()
     },
     onError: (err) => toast.error(getErrorMessage(err)),
@@ -331,7 +320,7 @@ export default function BriefRequestDetailPage() {
             )}
             <div className="flex items-center gap-1.5 text-gray-500">
               <UserIcon className="h-4 w-4" />
-              {req.requester_name}
+              <AnonymousName name={req.requester_name} />
               {req.requester_year_of_call && ` · Called ${req.requester_year_of_call}`}
             </div>
           </div>
@@ -364,7 +353,13 @@ export default function BriefRequestDetailPage() {
       {/* ── Engagement section (after acceptance) ── */}
       {engagement && (isRequester || user?.id === engagement.holding_lawyer) && (
         <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-          <h2 className="text-sm font-semibold text-charcoal-900 mb-3">Engagement</h2>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm font-semibold text-charcoal-900">Engagement</h2>
+            <Button as={Link} to={`/brief-connect/engagements/${engagement.id}/chat`} size="sm" variant="secondary" className="flex items-center gap-1.5">
+              <ChatBubbleLeftRightIcon className="h-4 w-4" />
+              Open Chat
+            </Button>
+          </div>
           <Card className="p-5 border-emerald-200 bg-emerald-50/30">
             <div className="flex flex-wrap items-center gap-2 mb-3">
               <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
@@ -395,32 +390,7 @@ export default function BriefRequestDetailPage() {
               </div>
             )}
 
-            {/* Holding lawyer marks complete */}
-            {user?.id === engagement.holding_lawyer && engagement.status === 'confirmed' && (
-              <MarkCompleteForm onSubmit={(notes) => completeMutation.mutate(notes)} loading={completeMutation.isLoading} />
-            )}
-
-            {/* Requester leaves review */}
-            {isRequester && engagement.status === 'completed' && !engagement.has_review && !showReviewForm && (
-              <Button size="sm" className="mt-4" onClick={() => setShowReviewForm(true)}>
-                Leave a Review
-              </Button>
-            )}
-            {showReviewForm && (
-              <ReviewForm
-                value={reviewForm}
-                onChange={setReviewForm}
-                onSubmit={() => reviewMutation.mutate(reviewForm)}
-                loading={reviewMutation.isLoading}
-                onCancel={() => setShowReviewForm(false)}
-              />
-            )}
-            {engagement.has_review && (
-              <p className="mt-3 text-xs text-gray-400 flex items-center gap-1">
-                <CheckCircleIcon className="h-4 w-4 text-emerald-500" />
-                Review submitted
-              </p>
-            )}
+            <EngagementCompletionPanel engagement={engagement} isRequester={isRequester} />
           </Card>
         </motion.div>
       )}
@@ -438,7 +408,6 @@ export default function BriefRequestDetailPage() {
                   </p>
                   <p className="text-xs text-gray-500 mt-0.5">
                     Status: <span className="font-medium">{myApp.status_display}</span>
-                    {myApp.proposed_fee && ` · ₦${formatNumber(myApp.proposed_fee)}`}
                   </p>
                   {myApp.message && <p className="text-sm text-gray-600 mt-2">{myApp.message}</p>}
                 </div>
@@ -454,6 +423,15 @@ export default function BriefRequestDetailPage() {
                   </Button>
                 )}
               </div>
+              <div className="mt-3">
+                <OfferThread
+                  applicationId={myApp.id}
+                  openingAmount={myApp.proposed_fee ?? req.offered_fee}
+                  openingProposedByName={req.requester_name}
+                  isRequesterView={false}
+                  disabled={myApp.status !== 'pending'}
+                />
+              </div>
             </Card>
           ) : (
             <Card className="p-5">
@@ -468,8 +446,8 @@ export default function BriefRequestDetailPage() {
                 <ApplyForm
                   value={applyForm}
                   onChange={setApplyForm}
-                  onSubmit={() => applyMutation.mutate(applyForm)}
-                  loading={applyMutation.isLoading}
+                  onSubmit={() => applyPolicyGate.runProtected(() => applyMutation.mutate(applyForm))}
+                  loading={applyMutation.isLoading || applyPolicyGate.checking}
                   error={applyError}
                   onCancel={() => setShowApplyForm(false)}
                 />
@@ -495,6 +473,7 @@ export default function BriefRequestDetailPage() {
                 onReject={(appId) => rejectMutation.mutate(appId)}
                 accepting={acceptMutation.isLoading}
                 rejecting={rejectMutation.isLoading}
+                fallbackFee={req.offered_fee}
               />
             ))}
           </div>
@@ -510,6 +489,8 @@ export default function BriefRequestDetailPage() {
           />
         </Card>
       )}
+
+      <PolicyAcceptModal {...applyPolicyGate.modalProps} />
     </div>
   )
 }
@@ -531,6 +512,7 @@ function ApplyForm({ value, onChange, onSubmit, loading, error, onCancel }) {
           placeholder="Leave blank to accept offered fee"
           className="input-field w-full text-sm"
         />
+        <FeeCalculator amount={value.proposed_fee} perspective="earner" />
       </div>
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">Message to Requester</label>
@@ -555,63 +537,3 @@ function ApplyForm({ value, onChange, onSubmit, loading, error, onCancel }) {
   )
 }
 
-function MarkCompleteForm({ onSubmit, loading }) {
-  const [notes, setNotes] = useState('')
-  return (
-    <div className="mt-4 pt-3 border-t border-emerald-200 space-y-3">
-      <p className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Mark as Completed</p>
-      <textarea
-        value={notes}
-        onChange={(e) => setNotes(e.target.value)}
-        rows={3}
-        placeholder="Briefly describe what happened in court today…"
-        className="input-field w-full text-sm resize-none"
-      />
-      <Button size="sm" onClick={() => onSubmit(notes)} disabled={loading}>
-        {loading ? 'Saving…' : 'Mark Complete'}
-      </Button>
-    </div>
-  )
-}
-
-function ReviewForm({ value, onChange, onSubmit, loading, onCancel }) {
-  return (
-    <div className="mt-4 pt-3 border-t border-emerald-200 space-y-3">
-      <p className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Leave a Review</p>
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Rating</label>
-        <div className="flex gap-1">
-          {[1, 2, 3, 4, 5].map((n) => (
-            <button
-              key={n}
-              type="button"
-              onClick={() => onChange((f) => ({ ...f, rating: n }))}
-              className="p-1"
-            >
-              {n <= value.rating
-                ? <StarSolid className="h-6 w-6 text-amber-400" />
-                : <StarIcon className="h-6 w-6 text-gray-200 hover:text-amber-300" />
-              }
-            </button>
-          ))}
-        </div>
-      </div>
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Comment</label>
-        <textarea
-          value={value.comment}
-          onChange={(e) => onChange((f) => ({ ...f, comment: e.target.value }))}
-          rows={3}
-          placeholder="How was the brief handled? Would you recommend this lawyer?"
-          className="input-field w-full text-sm resize-none"
-        />
-      </div>
-      <div className="flex gap-2">
-        <Button size="sm" onClick={onSubmit} disabled={loading}>
-          {loading ? 'Submitting…' : 'Submit Review'}
-        </Button>
-        <Button size="sm" variant="secondary" onClick={onCancel}>Cancel</Button>
-      </div>
-    </div>
-  )
-}

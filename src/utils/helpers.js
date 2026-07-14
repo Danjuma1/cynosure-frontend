@@ -5,6 +5,23 @@ export function cn(...inputs) {
   return clsx(inputs)
 }
 
+// True if a Brief Connect display name is an anonymized handle
+// ("Lawyer #A1B2" / "Applicant #C3D4") rather than a real name.
+export function isAnonymizedName(name) {
+  return typeof name === 'string' && /^(Lawyer|Applicant) #/.test(name)
+}
+
+// Brief Connect platform commission — mirrors apps.payments.fees.calculate_fee.
+// The fee is added on top of the agreed amount; the lawyer always receives
+// the full agreed amount, the requester pays agreed + fee.
+export function calculatePlatformFee(amount, percentage) {
+  const agreed = Number(amount)
+  const pct = Number(percentage)
+  if (!agreed || !pct || agreed <= 0) return { feeAmount: 0, total: agreed || 0 }
+  const feeAmount = Math.round(agreed * (pct / 100) * 100) / 100
+  return { feeAmount, total: Math.round((agreed + feeAmount) * 100) / 100 }
+}
+
 // Format date
 export function formatDate(date, options = {}) {
   if (!date) return ''

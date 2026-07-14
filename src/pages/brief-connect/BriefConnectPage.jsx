@@ -19,6 +19,7 @@ import {
   CheckCircleIcon,
 } from '@heroicons/react/24/outline'
 import { Card, Button, EmptyState, Badge } from '@/components/common'
+import AnonymousName from '@/components/brief-connect/AnonymousName'
 import { briefConnectAPI } from '@/services/api'
 import { formatDate, formatNumber, timeAgo } from '@/utils/helpers'
 import { useAuthStore } from '@/store/authStore'
@@ -107,7 +108,7 @@ function BriefRequestCard({ request }) {
                 <div className="flex items-center gap-3 text-xs text-gray-500">
                   <span className="flex items-center gap-1">
                     <UserIcon className="h-3.5 w-3.5" />
-                    {request.requester_name}
+                    <AnonymousName name={request.requester_name} />
                     {request.requester_year_of_call && ` (${request.requester_year_of_call})`}
                   </span>
                   <span className="flex items-center gap-1">

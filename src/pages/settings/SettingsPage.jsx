@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
 import toast from 'react-hot-toast'
 import {
@@ -8,9 +8,10 @@ import {
   BellIcon,
   LockClosedIcon,
   CreditCardIcon,
+  BanknotesIcon,
 } from '@heroicons/react/24/outline'
 import { Card, CardHeader, CardTitle, Button, Input } from '@/components/common'
-import { authAPI, notificationsAPI } from '@/services/api'
+import { authAPI, notificationsAPI, paymentsAPI } from '@/services/api'
 import { useAuthStore } from '@/store/authStore'
 import { getErrorMessage } from '@/utils/helpers'
 
@@ -22,6 +23,7 @@ export default function SettingsPage() {
     { id: 'profile', label: 'Profile', icon: <UserCircleIcon className="h-5 w-5" /> },
     { id: 'notifications', label: 'Notifications', icon: <BellIcon className="h-5 w-5" /> },
     { id: 'security', label: 'Security', icon: <LockClosedIcon className="h-5 w-5" /> },
+    { id: 'payout', label: 'Payout Account', icon: <BanknotesIcon className="h-5 w-5" /> },
     { id: 'subscription', label: 'Subscription', icon: <CreditCardIcon className="h-5 w-5" /> },
   ]
 
@@ -54,6 +56,7 @@ export default function SettingsPage() {
           {activeTab === 'profile' && <ProfileSettings user={user} updateUser={updateUser} />}
           {activeTab === 'notifications' && <NotificationSettings />}
           {activeTab === 'security' && <SecuritySettings />}
+          {activeTab === 'payout' && <PayoutSettings />}
           {activeTab === 'subscription' && <SubscriptionSettings user={user} />}
         </div>
       </div>
@@ -157,6 +160,91 @@ function SecuritySettings() {
         <Input label="Confirm Password" type="password" error={errors.confirm_password?.message} {...register('confirm_password', { required: 'Required', validate: (v) => v === newPassword || 'Passwords must match' })} />
         <div className="flex justify-end"><Button type="submit" isLoading={mutation.isPending}>Update Password</Button></div>
       </form>
+    </Card>
+  )
+}
+
+function PayoutSettings() {
+  const queryClient = useQueryClient()
+  const [form, setForm] = useState({ bank_code: '', bank_name: '', account_number: '' })
+
+  const { data: banksData } = useQuery({ queryKey: ['payments', 'banks'], queryFn: () => paymentsAPI.listBanks(), staleTime: Infinity })
+  const { data: accountsData, isLoading } = useQuery({ queryKey: ['payments', 'bank-accounts'], queryFn: () => paymentsAPI.listBankAccounts() })
+
+  const banks = banksData?.data?.data || []
+  const accounts = accountsData?.data?.results || accountsData?.data || []
+
+  const addMutation = useMutation({
+    mutationFn: () => paymentsAPI.addBankAccount(form),
+    onSuccess: () => {
+      toast.success('Bank account added and verified.')
+      setForm({ bank_code: '', bank_name: '', account_number: '' })
+      queryClient.invalidateQueries(['payments', 'bank-accounts'])
+    },
+    onError: (err) => toast.error(getErrorMessage(err)),
+  })
+
+  const deleteMutation = useMutation({
+    mutationFn: (id) => paymentsAPI.deleteBankAccount(id),
+    onSuccess: () => queryClient.invalidateQueries(['payments', 'bank-accounts']),
+  })
+
+  function handleBankChange(e) {
+    const bank = banks.find((b) => b.code === e.target.value)
+    setForm((f) => ({ ...f, bank_code: e.target.value, bank_name: bank?.name || '' }))
+  }
+
+  return (
+    <Card className="p-6">
+      <CardHeader className="px-0 pt-0">
+        <CardTitle>Payout Bank Account</CardTitle>
+      </CardHeader>
+      <p className="text-sm text-gray-500 -mt-4 mb-6">
+        Where Brief Connect escrow releases are sent once a requester confirms your completed brief.
+      </p>
+
+      {!isLoading && accounts.length > 0 && (
+        <div className="space-y-2 mb-6">
+          {accounts.map((acc) => (
+            <div key={acc.id} className="flex items-center justify-between p-3 rounded-lg border border-gray-200">
+              <div>
+                <p className="font-medium text-charcoal-900">{acc.bank_name} — {acc.account_number}</p>
+                <p className="text-sm text-gray-500">{acc.account_name}{acc.is_default && ' · Default'}</p>
+              </div>
+              <Button variant="secondary" size="sm" onClick={() => deleteMutation.mutate(acc.id)} disabled={deleteMutation.isLoading}>
+                Remove
+              </Button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-charcoal-700 mb-1.5">Bank</label>
+          <select value={form.bank_code} onChange={handleBankChange} className="input-field w-full">
+            <option value="">Select your bank…</option>
+            {banks.map((b) => (
+              <option key={b.code} value={b.code}>{b.name}</option>
+            ))}
+          </select>
+        </div>
+        <Input
+          label="Account Number"
+          value={form.account_number}
+          onChange={(e) => setForm((f) => ({ ...f, account_number: e.target.value }))}
+          placeholder="0123456789"
+        />
+        <div className="flex justify-end">
+          <Button
+            onClick={() => addMutation.mutate()}
+            isLoading={addMutation.isLoading}
+            disabled={!form.bank_code || form.account_number.length < 10}
+          >
+            Verify & Add Account
+          </Button>
+        </div>
+      </div>
     </Card>
   )
 }

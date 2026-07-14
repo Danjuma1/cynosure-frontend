@@ -1,4 +1,5 @@
 import axios from 'axios'
+import toast from 'react-hot-toast'
 import { useAuthStore } from '@/store/authStore'
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || '/api/v1'
@@ -50,7 +51,15 @@ api.interceptors.response.use(
         return Promise.reject(refreshError)
       }
     }
-    
+
+    // Fallback for direct-API bypass attempts: the primary flow always
+    // pre-checks policy status via usePolicyGate before submitting, but a
+    // policy version bump between that check and this request (or any
+    // other bypass of the gate) still surfaces a clear message here.
+    if (error.response?.data?.error?.code === 'POLICY_REQUIRED') {
+      toast.error(error.response.data.error.message || 'Please accept the current policy and try again.')
+    }
+
     return Promise.reject(error)
   }
 )
@@ -206,17 +215,75 @@ export const briefConnectAPI = {
   rejectApplication: (requestId, applicationId) =>
     api.post(`/brief-connect/requests/${requestId}/reject-application/`, { application_id: applicationId }),
 
+  // Fee negotiation (counter-offers on a specific application)
+  listOffers: (applicationId) => api.get(`/brief-connect/applications/${applicationId}/offers/`),
+  counterOffer: (applicationId, data) => api.post(`/brief-connect/applications/${applicationId}/offers/`, data),
+  acceptOffer: (applicationId, offerId) =>
+    api.post(`/brief-connect/applications/${applicationId}/offers/${offerId}/accept/`),
+  declineOffer: (applicationId, offerId) =>
+    api.post(`/brief-connect/applications/${applicationId}/offers/${offerId}/decline/`),
+
   // Engagements
   listEngagements: (params) => api.get('/brief-connect/engagements/', { params }),
   getEngagement: (id) => api.get(`/brief-connect/engagements/${id}/`),
   startEngagement: (id) => api.post(`/brief-connect/engagements/${id}/start/`),
-  completeEngagement: (id, outcome_notes) =>
-    api.post(`/brief-connect/engagements/${id}/complete/`, { outcome_notes }),
-  disputeEngagement: (id) => api.post(`/brief-connect/engagements/${id}/dispute/`),
+  submitCompletion: (id, data) => {
+    const isFormData = data instanceof FormData
+    return api.post(`/brief-connect/engagements/${id}/submit-completion/`, data, {
+      headers: isFormData ? { 'Content-Type': 'multipart/form-data' } : undefined,
+    })
+  },
+  confirmCompletion: (id, outcome_notes) =>
+    api.post(`/brief-connect/engagements/${id}/confirm-completion/`, { outcome_notes }),
+  rejectCompletion: (id, reason) =>
+    api.post(`/brief-connect/engagements/${id}/reject-completion/`, { reason }),
+  getEscrow: (id) => api.get(`/brief-connect/engagements/${id}/escrow/`),
 
   // Reviews
   submitReview: (data) => api.post('/brief-connect/reviews/', data),
   listReviews: (params) => api.get('/brief-connect/reviews/', { params }),
+}
+
+// Payments (escrow, fee, payout bank accounts)
+export const paymentsAPI = {
+  getFeeConfig: () => api.get('/payments/fee-config/'),
+  listBanks: () => api.get('/payments/banks/'),
+  listBankAccounts: () => api.get('/payments/bank-accounts/'),
+  addBankAccount: (data) => api.post('/payments/bank-accounts/', data),
+  deleteBankAccount: (id) => api.delete(`/payments/bank-accounts/${id}/`),
+  initializeEscrow: (engagementId, data) => api.post(`/payments/escrow/${engagementId}/initialize/`, data),
+  verifyEscrow: (engagementId, reference) => api.post(`/payments/escrow/${engagementId}/verify/`, { reference }),
+}
+
+// Disputes
+export const disputesAPI = {
+  list: (params) => api.get('/disputes/', { params }),
+  get: (id) => api.get(`/disputes/${id}/`),
+  addEvidence: (id, data) => {
+    const isFormData = data instanceof FormData
+    return api.post(`/disputes/${id}/add-evidence/`, data, {
+      headers: isFormData ? { 'Content-Type': 'multipart/form-data' } : undefined,
+    })
+  },
+  resolve: (id, data) => api.post(`/disputes/${id}/resolve/`, data),
+}
+
+// Policies endpoints
+export const policiesAPI = {
+  getPending: (checkpoint) => api.get('/policies/pending/', { params: { checkpoint } }),
+  accept: (policyId) => api.post('/policies/accept/', { policy_id: policyId }),
+}
+
+// Brief Connect chat endpoints
+export const briefChatAPI = {
+  listMessages: (engagementId, params) =>
+    api.get(`/brief-connect/engagements/${engagementId}/messages/`, { params }),
+  sendMessage: (engagementId, data) => {
+    const isFormData = data instanceof FormData
+    return api.post(`/brief-connect/engagements/${engagementId}/messages/`, data, {
+      headers: isFormData ? { 'Content-Type': 'multipart/form-data' } : undefined,
+    })
+  },
 }
 
 // Admin endpoints

@@ -45,7 +45,11 @@ import {
   PostBriefPage,
   BriefRequestDetailPage,
   MyBriefsPage,
+  ChatPage,
 } from '@/pages/brief-connect'
+
+// Admin Pages
+import DisputesPage from '@/pages/admin/DisputesPage'
 
 // Notifications Pages
 import { NotificationsPage } from '@/pages/notifications'
@@ -171,6 +175,10 @@ export default function App() {
         <Route path="/brief-connect/post" element={<PostBriefPage />} />
         <Route path="/brief-connect/my-briefs" element={<MyBriefsPage />} />
         <Route path="/brief-connect/requests/:id" element={<BriefRequestDetailPage />} />
+        <Route path="/brief-connect/engagements/:id/chat" element={<ChatPage />} />
+
+        {/* ── Admin ──────────────────────────────────── */}
+        <Route path="/admin/disputes" element={<DisputesPage />} />
 
         {/* Notifications */}
         <Route path="/notifications" element={<NotificationsPage />} />
